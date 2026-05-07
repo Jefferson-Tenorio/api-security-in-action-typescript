@@ -3,3 +3,10 @@ dist/
 coverage/
 .env
 *.js.map
+private.pem   # NUNCA sobe pro git
+public.pem
+# .gitignore
+*.pem
+*.key
+*.cert
+*.crt
