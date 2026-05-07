@@ -1,10 +1,14 @@
 import { Router } from 'express'
 import { NatterController} from './natter-controller.js'
 import { defaultLimiter, writeLimiter } from './../../shared/utils/utils-rate-limit.js'
+import {authenticate} from './../../shared/auth/auth-middleware.js'
 
 
 export function CreateNatterRouter(controller: NatterController): Router {
     const router = Router()
+
+    router.use(authenticate)
+
     // message
     router.post('/message',writeLimiter,controller.create)
     router.get('/message',defaultLimiter,controller.findAllMessage)
