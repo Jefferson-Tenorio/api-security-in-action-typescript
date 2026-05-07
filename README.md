@@ -359,6 +359,149 @@ Path aliases
 Docker
 GitHub Actions (CI)
 
+# Eslint and pritter.
+
+```bash
+pnpm add -D eslint @eslint/js typescript-eslint eslint-plugin-perfectionist eslint-config-prettier prettier @vitest/eslint-plugin
+```
+
+Instalado. Agora cria os dois arquivos de configuração.
+
+**1. ESLint — cria `eslint.config.js` na raiz:**
+
+```bash
+cat > eslint.config.js << 'EOF'
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import perfectionist from 'eslint-plugin-perfectionist';
+import vitest from '@vitest/eslint-plugin';
+import prettier from 'eslint-config-prettier';
+
+export default tseslint.config(
+  js.configs.recommended,
+  tseslint.configs.recommended,
+  perfectionist.configs['recommended-natural'],
+  prettier,
+  {
+    files: ['**/*.test.ts'],
+    plugins: { vitest },
+    rules: vitest.configs.recommended.rules,
+  },
+  {
+    ignores: ['dist/', 'coverage/', 'node_modules/'],
+  },
+);
+EOF
+```
+
+**2. Prettier — cria `.prettierrc` na raiz:**
+
+```bash
+cat > .prettierrc << 'EOF'
+{
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 80,
+  "tabWidth": 2
+}
+EOF
+```
+
+Depois adiciona os scripts no `package.json`:
+
+```json
+"lint":       "eslint .",
+"lint:fix":   "eslint --fix .",
+"format":     "prettier --write .",
+"format:check": "prettier --check ."
+```
+
+Cola o output de qualquer erro que aparecer.
+
+# OpenSSL
+
+É um projeto open source que implementa protocolos de comunicação segura (TLS/SSL) e uma biblioteca de criptgrafia de propósito geral, acompanhado de ferramentas de linhas de comando.
+
+Composto por:
+- libcrypto -> AES, RSA, ECC, SHA, HMAC..., gera chaves, assinatura digital e funções de hash.
+- libssl -> implementação de protocolos (TSL 1.2/1.3), handshake, negociação de cifra, gerenciamento de sessão segura.
+- cli -> interface, gerar certificados, testar conexão TLS, criptografar e descriptgrafar dados.
+
+Principais comandos:
+
+Gerar par de chaves RSA 2048:
+```bash
+# gera a chave privada
+openssl genrsa -out private.pem 2048
+# extrai a chave pública da privada
+openssl rsa -in private.pem -pubout -out public.pem
+```
+
+Confirmar se o par de chaves gera o mesmo valor:
+```bash
+# confirmar que o par bate — os dois devem gerar o mesmo hash
+openssl rsa -in private.pem -pubout | openssl md5
+openssl rsa -in public.pem -pubin | openssl md5
+```
+
+Usos:
+```javascript
+export function signToken(payload: TokenPayload): string {
+  return jwt.sign(payload, privateKey, {
+    algorithm: 'RS256',
+    expiresIn: '15m',
+  });
+}
+
+export function verifyToken(token: string): TokenPayload {
+  return jwt.verify(token, publicKey, {
+    algorithms: ['RS256'],
+  }) as TokenPayload;
+}
+```
+
+
+# mkcert
+
+Antes disso você instala o mkcert
+```bash
+# Instala o mkcert
+sudo apt install mkcert
+# Habilita o certutil para funcionar no Firefox/Chrome
+sudo apt install libnss3-tools
+# Criou e instalou a CA local no sistema
+mkcert -install
+# Gere os certificados mkcert localhost 127.0.0.1, para seu localhost.
+mkcert localhost 127.0.0.1
+```
+
+Isso gerou os dois arquivos:
+
+- localhost+1.pem — o certificado
+- localhost+1-key.pem — a chave privada
+
+Agora você habilita essa configuração para dentro do server.ts
+
+```javascript
+const options = {
+  key:  fs.readFileSync('localhost+1-key.pem'),
+  cert: fs.readFileSync('localhost+1.pem'),
+};
+
+const app = new App();
+const port = Number(process.env.PORT) || 3000;
+
+https.createServer(options, app.instance).listen(port, () => {
+  console.log(`HTTPS rodando em https://localhost:${port}`);
+});
+```
+
+# CORs & Helmet
+
+Segurança http.
+
+
 ## Roadmaps
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://roadmap.sh/typescript)
@@ -366,3 +509,4 @@ GitHub Actions (CI)
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://roadmap.sh/nodejs)
 [![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://roadmap.sh/nextjs)
 [![Backend](https://img.shields.io/badge/Backend-0A0A0A?style=for-the-badge&logo=server&logoColor=white)](https://roadmap.sh/backend)
+
