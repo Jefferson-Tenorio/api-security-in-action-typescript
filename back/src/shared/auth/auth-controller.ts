@@ -1,5 +1,5 @@
 import type {Request,Response} from 'express'
-import {asyncHandler} from './../utils/utils-async-handler.js'
+import {asyncHandler} from '../utils/utils-async-handler.js'
 import {AuthService} from './auth-service.js'
 
 export class AuthController{

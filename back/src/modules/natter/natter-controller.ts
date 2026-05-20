@@ -1,6 +1,6 @@
 import { NatterService, IsMessage, IsSpace, type Message, type Space } from "./natter-service.js";
 import  type { Request, Response } from 'express';
-import { asyncHandler } from './../../shared/utils/utils-async-handler.js'
+import { asyncHandler } from '../../shared/utils/utils-async-handler.js'
 import { HttpError } from "../../shared/error/http-error.js";
 
 export class NatterController{

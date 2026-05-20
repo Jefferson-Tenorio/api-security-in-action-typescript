@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { UserRepository } from './user-repository.js';
 import { signToken } from './jwt-service.js';
-import { HttpError } from './../error/http-error.js';
+import { HttpError } from '../error/http-error.js';
 
 export class AuthService {
   constructor(private readonly userRepository: UserRepository) {}
@@ -10,6 +10,7 @@ export class AuthService {
     const exists = await this.userRepository.findByUsername(username);
     if (exists) throw HttpError.conflict('Username já existe');
 
+    //bcrypt é uma função de hash unidirecional e intencionalemente lenta, projetada para armazenar senhas com segurança.
     const hashed = await bcrypt.hash(password, 10);
     const user = await this.userRepository.create(username, hashed);
 

@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { requestContext } from './../context/request-context.js'
+import { requestContext } from '../context/request-context.js'
 import { HttpError } from './http-error.js';
 
 function buildErrorBody(error: HttpError) {

@@ -1,6 +1,6 @@
 import postgres from 'postgres'
 import type { Message, Space} from './natter-service.js'
-import { HttpError} from './../../shared/error/http-error.js'
+import { HttpError} from '../../shared/error/http-error.js'
 
 export class NatterRepository {
 
