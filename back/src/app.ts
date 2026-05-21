@@ -21,7 +21,7 @@ export class App {
   private setupMiddlewares(): void {
     this.instance.disable('x-powered-by')
     this.instance.use(cors({
-    origin: 'http://localhost:3000', 
+    origin: 'http://localhost:5173', 
     credentials: true,               
     }));
     this.instance.use(express.json());
