@@ -1,6 +1,26 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export function Register() {
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+
+  async function handleRegister() {
+    const res = await fetch('https://localhost:3000/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    })
+
+    if (res.ok) {
+      navigate('/login')
+    } else {
+      const data = await res.json()
+      setError(data.message)
+    }
+  }
+
   const navigate = useNavigate()
 
     return (
@@ -26,7 +46,10 @@ export function Register() {
 
                                     <div className="flex flex-col gap-1.5 text-gray-400">
                                         USERNAME
-                                        <input className="bg-gray-300 focus:outline-none px-1 py-0.5 text-black"></input>
+                                        <input className="bg-gray-300 focus:outline-none px-1 py-0.5 text-black"
+                                            value={username}
+                                            onChange={e => setUsername(e.target.value)}
+                                        ></input>
                                     </div> 
 
                                     <div className="flex flex-col gap-1.5 text-gray-400">
@@ -36,15 +59,21 @@ export function Register() {
 
                                     <div className="flex flex-col gap-1.5 text-gray-400">
                                         PASSWORD
-                                        <input type="password" className="bg-gray-300 focus:outline-none px-1 py-0.5 text-black"></input>
+                                        <input type="password" className="bg-gray-300 focus:outline-none px-1 py-0.5 text-black"
+                                            value={password}
+                                            onChange={e => setPassword(e.target.value)}
+                                            ></input>
                                         REPEAT PASSWORD
                                         <input type="password" className="bg-gray-300 focus:outline-none px-1 py-0.5 text-black"></input>
+
+                                        {error && <p className="text-red-500 text-sm">{error}</p>}
                                     </div>
                                 </div>
 
                                 <div>
                                       Natter may send me personalized emails about content and updates. See our Privacy Policy for more details.</div>
-                                <button className="bg-gray-900 text-amber-50 rounded-3xl h-9    ">
+                                <button className="bg-gray-900 text-amber-50 rounded-3xl h-9"
+                                onClick={handleRegister}>
                                     Create Account
                                 </button>
                         </div>
