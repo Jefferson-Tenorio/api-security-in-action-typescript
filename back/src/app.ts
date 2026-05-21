@@ -25,6 +25,7 @@ export class App {
     credentials: true,               
     }));
     this.instance.use(express.json());
+    this.instance.use(httpLogger);
 
 
     //headers
@@ -36,7 +37,6 @@ export class App {
       next();
     });
     this.instance.use(cookieParser());
-    this.instance.use(httpLogger);
   }
 
   private setupRoutes(): void {
