@@ -10,6 +10,7 @@ A hands-on implementation of 'API Security in Action' by Neil Madden, built in T
 4. [Mkcert](#mkcert)
 5. [CORs & Helmet](#cors--helmet)
 6. [Migrations](#migrations)
+7. [Project Structure](#project-structure)
 
 ## OpenSSL
 
@@ -77,6 +78,14 @@ Isso gerou os dois arquivos:
 - localhost+1.pem — o certificado
 - localhost+1-key.pem — a chave privada
 
+Mova-os para a pasta `certs/` junto com as chaves JWT (`private.pem`/`public.pem`):
+
+```bash
+mkdir -p certs && mv localhost+1.pem localhost+1-key.pem certs/
+```
+
+> A pasta `certs/` está no `.gitignore` — nada de chaves/certificados sobe para o git.
+
 Agora você habilita essa configuração para dentro do server.ts
 
 ```javascript
@@ -112,6 +121,41 @@ pnpm dev:env
 ```
 
 > O servidor espera as tabelas `users`, `spaces`, `messages` e `audit_logs` existirem no banco — sem rodar `migrate:up`, os endpoints retornam `500`.
+
+## Project Structure
+
+```
+back/
+├── certs/                  # chaves e certificados (gitignored)
+│   ├── private.pem         # chave privada JWT (RS256)
+│   ├── public.pem          # chave pública JWT (RS256)
+│   ├── localhost+1.pem     # certificado TLS (mkcert)
+│   └── localhost+1-key.pem # chave privada TLS (mkcert)
+├── docs/                   # documentação (setup, fluxos)
+├── migrations/             # migrations SQL (node-pg-migrate)
+├── src/
+│   ├── index.ts            # entrypoint HTTPS
+│   ├── app.ts              # montagem do Express (middlewares + rotas)
+│   ├── config/
+│   │   └── env.ts          # variáveis de ambiente tipadas
+│   ├── modules/            # módulos de domínio
+│   │   ├── audit_log/      # auditoria de requisições (middleware + repo)
+│   │   └── natter/         # domínio principal (controller/service/repo/router/types)
+│   └── shared/
+│       ├── auth/           # auth: controller, service, JWT, middleware, router
+│       ├── context/        # AsyncLocalStorage (requestId por request)
+│       ├── db/             # conexões PostgreSQL (user/admin)
+│       ├── error/          # HttpError + globalErrorHandler
+│       ├── http/           # httpLogger
+│       └── utils/          # async-handler, rate-limit
+├── .env                    # variáveis locais (gitignored) — veja .env.example
+├── .env.example            # modelo das variáveis necessárias
+├── database.json           # config do node-pg-migrate
+├── docker-compose.yml      # Postgres local
+└── Dockerfile
+```
+
+Cada módulo segue o mesmo padrão: `controller` (HTTP) → `service` (regras de negócio) → `repository` (SQL) → `router` (rotas), montados por um `*-module.ts`.
 
 ## Roadmaps
 
