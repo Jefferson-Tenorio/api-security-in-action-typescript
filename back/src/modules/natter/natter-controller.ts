@@ -20,12 +20,12 @@ export class NatterController {
 
   deleteMessage = asyncHandler(async (req: Request, res: Response) => {
     await this.service.deleteMessage(req.params.id as string);
-    res.status(204).send({ message: 'Deleted' });
+    res.status(204).end();
   });
 
   deleteSpace = asyncHandler(async (req: Request, res: Response) => {
     await this.service.deleteSpace(req.params.id as string);
-    res.status(204).send({ message: 'Deleted' });
+    res.status(204).end();
   });
 
   findAllMessage = asyncHandler(async (_req: Request, res: Response) => {

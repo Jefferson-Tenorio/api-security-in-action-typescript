@@ -20,7 +20,7 @@ export function Login() {
       navigate('/home')
     } else {
       const data = await res.json()
-      setError(data.message)
+      setError(data.error?.message ?? 'Login failed')
     }
   }
 

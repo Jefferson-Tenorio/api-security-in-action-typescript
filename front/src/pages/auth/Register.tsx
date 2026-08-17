@@ -17,7 +17,7 @@ export function Register() {
       navigate('/login')
     } else {
       const data = await res.json()
-      setError(data.message)
+      setError(data.error?.message ?? 'Registration failed')
     }
   }
 
