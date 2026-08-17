@@ -1,24 +1,23 @@
-import postgres from 'postgres'
+import postgres from 'postgres';
 
-import type { Message, Space} from './natter-service.js'
+import type { Message, Space } from './natter-types.js';
 
-import { HttpError} from '../../shared/error/http-error.js'
+import { HttpError } from '../../shared/error/http-error.js';
 
 export class NatterRepository {
+  constructor(private readonly conn: postgres.Sql) {}
 
-  constructor(private readonly conn: postgres.Sql) {} 
-
-  //users
-  async createMessage(data: Message): Promise<Message>{
+  // users
+  async createMessage(data: Message): Promise<Message> {
     const [message] = await this.conn<Message[]>`
-        INSERT INTO messages (msg_text, space_id, author)
-        VALUES (${data.content},(${data.space_id}),(${data.author}))
-        RETURNING *
+      INSERT INTO messages (msg_text, space_id, author)
+      VALUES (${data.content}, ${data.space_id}, ${data.author})
+      RETURNING *
     `;
-    return message as Message
+    return message as Message;
   }
 
-  //users
+  // users
   async createSpace(data: Space): Promise<Space> {
     const [space] = await this.conn<Space[]>`
       INSERT INTO spaces (name, owner)
@@ -28,37 +27,35 @@ export class NatterRepository {
     return space as Space;
   }
 
-  //admin
+  // admin
   async deleteMessage(id: string): Promise<void> {
     await this.conn<Message[]>`
       DELETE FROM messages WHERE id = ${id}
     `;
   }
 
-  //admin
+  // admin
   async deleteSpace(id: string): Promise<void> {
     await this.conn<Space[]>`
       DELETE FROM spaces WHERE id = ${id}
     `;
   }
 
-  //users
+  // users
   async findAllMessages(): Promise<Message[] | null> {
-    const message = await this.conn<Message[]>`
-      SELECT m.id,m.msg_time,m.msg_text FROM messages m JOIN spaces s ON m.space_id = s.id 
+    return this.conn<Message[]>`
+      SELECT m.id, m.msg_time, m.msg_text FROM messages m JOIN spaces s ON m.space_id = s.id
     `;
-    return message ?? null;
   }
 
-  //users
+  // users
   async findAllSpaces(): Promise<null | Space[]> {
-    const spaces = await this.conn<Space[]>`
+    return this.conn<Space[]>`
       SELECT * FROM spaces;
     `;
-    return spaces ?? null;
   }
 
-  //users    
+  // users
   async findByIdMessage(id: string): Promise<Message | null> {
     const [message] = await this.conn<Message[]>`
       SELECT * FROM messages WHERE id = ${id}
@@ -66,7 +63,7 @@ export class NatterRepository {
     return message ?? null;
   }
 
-  //users
+  // users
   async findByIdSpace(id: string): Promise<null | Space> {
     const [space] = await this.conn<Space[]>`
       SELECT * FROM spaces WHERE id = ${id}
@@ -74,21 +71,15 @@ export class NatterRepository {
     return space ?? null;
   }
 
-  //admin
-  async updateMessage(id: string,content:string): Promise<Message>{
-    try {
-      const [message] = await this.conn<Message[]>`
-        UPDATE messages
-        SET msg_text = ${content}
-        WHERE id = ${id}
-        RETURNING *
-      `
-      if(!message) throw HttpError.notFound("Message not found")
-      return message
-    } catch (error) {
-      console.log(error)
-      throw HttpError.notImplemented("Not implemented")
-    }
+  // admin
+  async updateMessage(id: string, content: string): Promise<Message> {
+    const [message] = await this.conn<Message[]>`
+      UPDATE messages
+      SET msg_text = ${content}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    if (!message) throw HttpError.notFound('Message not found');
+    return message;
   }
-
 }

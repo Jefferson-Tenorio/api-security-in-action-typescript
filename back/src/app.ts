@@ -5,7 +5,7 @@ import helmet from 'helmet';
 
 import { AuditModule } from './modules/audit_log/audit-module.js'
 import { NatterModule} from './modules/natter/natter-module.js'
-import { AuthModule } from './shared/auth/auth-modules.js';
+import { AuthModule } from './shared/auth/auth-module.js';
 import { globalErrorHandler } from './shared/error/global-error-handler.js';
 import { httpLogger } from './shared/http/http-logger.js';
 
