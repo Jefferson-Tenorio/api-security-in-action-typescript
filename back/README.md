@@ -9,6 +9,7 @@ A hands-on implementation of 'API Security in Action' by Neil Madden, built in T
 3. [OpenSSL](#openssl)
 4. [Mkcert](#mkcert)
 5. [CORs & Helmet](#cors--helmet)
+6. [Migrations](#migrations)
 
 
 ## OpenSSL  
@@ -92,6 +93,23 @@ https.createServer(options, app.instance).listen(port, () => {
 ## CORs & Helmet
 
 Segurança http.
+
+
+## Migrations
+
+Antes de rodar o servidor pela primeira vez (ou sempre que houver novas migrations), aplique-as no banco:
+
+```bash
+pnpm migrate:up
+```
+
+Depois, inicie o servidor:
+
+```bash
+pnpm dev:env
+```
+
+> O servidor espera as tabelas `users`, `spaces`, `messages` e `audit_logs` existirem no banco — sem rodar `migrate:up`, os endpoints retornam `500`.
 
 
 ## Roadmaps
