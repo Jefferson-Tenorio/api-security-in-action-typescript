@@ -23,6 +23,8 @@ interface ResponseLog {
   type: 'response';
 }
 
+const SENSITIVE_KEYS = ['authorization', 'password', 'token'];
+
 export function httpLogger(
   req: Request,
   res: Response,
@@ -33,7 +35,7 @@ export function httpLogger(
 
   requestContext.run({ requestId }, () => {
     log({
-      body: req.body as unknown,
+      body: sanitize(req.body),
       method: req.method,
       path: req.path,
       query: req.query,
@@ -79,4 +81,18 @@ function log(entry: LogEntry): void {
       '\x1b[90m' + '·'.repeat(process.stdout.columns || 50) + '\x1b[0m',
     );
   }
+}
+
+function sanitize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sanitize);
+  if (value && typeof value === 'object') {
+    const clean: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      clean[key] = SENSITIVE_KEYS.includes(key.toLowerCase())
+        ? '[REDACTED]'
+        : sanitize(item);
+    }
+    return clean;
+  }
+  return value;
 }

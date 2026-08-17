@@ -1,6 +1,6 @@
 import postgres from 'postgres';
 
-import type { Message, Space } from './natter-types.js';
+import type { Message, MessageView, Space, SpaceView } from './natter-types.js';
 
 import { HttpError } from '../../shared/error/http-error.js';
 
@@ -8,76 +8,80 @@ export class NatterRepository {
   constructor(private readonly conn: postgres.Sql) {}
 
   // users
-  async createMessage(data: Message): Promise<Message> {
-    const [message] = await this.conn<Message[]>`
+  async createMessage(data: Message, author: string): Promise<MessageView> {
+    const [message] = await this.conn<MessageView[]>`
       INSERT INTO messages (msg_text, space_id, author)
-      VALUES (${data.content}, ${data.space_id}, ${data.author})
-      RETURNING *
+      VALUES (${data.content}, ${data.space_id}, ${author})
+      RETURNING id, author, msg_text AS content, msg_time, space_id
     `;
-    return message as Message;
+    return message as MessageView;
   }
 
   // users
-  async createSpace(data: Space): Promise<Space> {
-    const [space] = await this.conn<Space[]>`
+  async createSpace(data: Space, owner: string): Promise<SpaceView> {
+    const [space] = await this.conn<SpaceView[]>`
       INSERT INTO spaces (name, owner)
-      VALUES (${data.name}, ${data.owner})
-      RETURNING *
+      VALUES (${data.name}, ${owner})
+      RETURNING id, name, owner
     `;
-    return space as Space;
+    return space as SpaceView;
   }
 
   // admin
-  async deleteMessage(id: string): Promise<void> {
-    await this.conn<Message[]>`
-      DELETE FROM messages WHERE id = ${id}
+  async deleteMessage(id: string, author: string): Promise<void> {
+    const result = await this.conn`
+      DELETE FROM messages WHERE id = ${id} AND author = ${author}
     `;
+    if (result.count === 0) throw HttpError.notFound('Message not found');
   }
 
   // admin
-  async deleteSpace(id: string): Promise<void> {
-    await this.conn<Space[]>`
-      DELETE FROM spaces WHERE id = ${id}
+  async deleteSpace(id: string, owner: string): Promise<void> {
+    const result = await this.conn`
+      DELETE FROM spaces WHERE id = ${id} AND owner = ${owner}
+    `;
+    if (result.count === 0) throw HttpError.notFound('Space not found');
+  }
+
+  // users
+  async findAllMessages(): Promise<MessageView[] | null> {
+    return this.conn<MessageView[]>`
+      SELECT m.id, m.author, m.msg_text AS content, m.msg_time, m.space_id
+      FROM messages m JOIN spaces s ON m.space_id = s.id
     `;
   }
 
   // users
-  async findAllMessages(): Promise<Message[] | null> {
-    return this.conn<Message[]>`
-      SELECT m.id, m.msg_time, m.msg_text FROM messages m JOIN spaces s ON m.space_id = s.id
+  async findAllSpaces(): Promise<null | SpaceView[]> {
+    return this.conn<SpaceView[]>`
+      SELECT id, name, owner FROM spaces;
     `;
   }
 
   // users
-  async findAllSpaces(): Promise<null | Space[]> {
-    return this.conn<Space[]>`
-      SELECT * FROM spaces;
-    `;
-  }
-
-  // users
-  async findByIdMessage(id: string): Promise<Message | null> {
-    const [message] = await this.conn<Message[]>`
-      SELECT * FROM messages WHERE id = ${id}
+  async findByIdMessage(id: string): Promise<MessageView | null> {
+    const [message] = await this.conn<MessageView[]>`
+      SELECT id, author, msg_text AS content, msg_time, space_id
+      FROM messages WHERE id = ${id}
     `;
     return message ?? null;
   }
 
   // users
-  async findByIdSpace(id: string): Promise<null | Space> {
-    const [space] = await this.conn<Space[]>`
-      SELECT * FROM spaces WHERE id = ${id}
+  async findByIdSpace(id: string): Promise<null | SpaceView> {
+    const [space] = await this.conn<SpaceView[]>`
+      SELECT id, name, owner FROM spaces WHERE id = ${id}
     `;
     return space ?? null;
   }
 
   // admin
-  async updateMessage(id: string, content: string): Promise<Message> {
-    const [message] = await this.conn<Message[]>`
+  async updateMessage(id: string, content: string, author: string): Promise<MessageView> {
+    const [message] = await this.conn<MessageView[]>`
       UPDATE messages
       SET msg_text = ${content}
-      WHERE id = ${id}
-      RETURNING *
+      WHERE id = ${id} AND author = ${author}
+      RETURNING id, author, msg_text AS content, msg_time, space_id
     `;
     if (!message) throw HttpError.notFound('Message not found');
     return message;

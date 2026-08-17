@@ -7,10 +7,10 @@ import { env } from './config/env.js';
 
 const options = {
   cert: fs.readFileSync(
-    path.join(import.meta.dirname, '..', 'localhost+1.pem'),
+    path.join(import.meta.dirname, '..', 'certs', 'localhost+1.pem'),
   ),
   key: fs.readFileSync(
-    path.join(import.meta.dirname, '..', 'localhost+1-key.pem'),
+    path.join(import.meta.dirname, '..', 'certs', 'localhost+1-key.pem'),
   ),
 };
 
