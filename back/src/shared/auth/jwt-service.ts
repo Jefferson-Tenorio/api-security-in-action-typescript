@@ -2,8 +2,12 @@ import fs from 'fs';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 
-const privateKey = fs.readFileSync(path.join(import.meta.dirname, '..', '..', 'private.pem'));
-const publicKey = fs.readFileSync(path.join(import.meta.dirname, '..', '..', 'public.pem'));
+const privateKey = fs.readFileSync(
+  path.join(import.meta.dirname, '..', '..', 'private.pem'),
+);
+const publicKey = fs.readFileSync(
+  path.join(import.meta.dirname, '..', '..', 'public.pem'),
+);
 
 interface TokenPayload {
   userId: string;

@@ -17,5 +17,5 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
       status INT NULL,
       audit_time TIMESTAMPTZ DEFAULT NOW()
     )
-  `)
+  `);
 }

@@ -16,5 +16,5 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     )
 
     
-  `)
+  `);
 }

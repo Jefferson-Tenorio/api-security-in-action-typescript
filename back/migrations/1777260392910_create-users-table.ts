@@ -63,5 +63,5 @@ GRANT app_admin TO admin_user;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_admin;
 
-  `)
+  `);
 }

@@ -75,6 +75,8 @@ function formatEntry(entry: LogEntry): string {
 function log(entry: LogEntry): void {
   console.log(formatEntry(entry));
   if (entry.type === 'response') {
-  console.log('\x1b[90m' + '·'.repeat(process.stdout.columns || 50) + '\x1b[0m')
+    console.log(
+      '\x1b[90m' + '·'.repeat(process.stdout.columns || 50) + '\x1b[0m',
+    );
   }
 }

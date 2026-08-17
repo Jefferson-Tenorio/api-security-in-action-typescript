@@ -6,8 +6,12 @@ import { App } from './app.js';
 import { env } from './config/env.js';
 
 const options = {
-  cert: fs.readFileSync(path.join(import.meta.dirname, '..', 'localhost+1.pem')),
-  key: fs.readFileSync(path.join(import.meta.dirname, '..', 'localhost+1-key.pem')),
+  cert: fs.readFileSync(
+    path.join(import.meta.dirname, '..', 'localhost+1.pem'),
+  ),
+  key: fs.readFileSync(
+    path.join(import.meta.dirname, '..', 'localhost+1-key.pem'),
+  ),
 };
 
 const app = new App();

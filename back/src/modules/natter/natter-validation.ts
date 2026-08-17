@@ -17,5 +17,7 @@ export function isSpace(raw: unknown): raw is Space {
 
   const normalized = raw as Record<string, unknown>;
 
-  return typeof normalized.name === 'string' && typeof normalized.owner === 'string';
+  return (
+    typeof normalized.name === 'string' && typeof normalized.owner === 'string'
+  );
 }
