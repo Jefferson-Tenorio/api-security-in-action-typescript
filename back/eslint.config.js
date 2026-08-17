@@ -10,6 +10,14 @@ export default tseslint.config(
   perfectionist.configs['recommended-natural'],
   prettier,
   {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
+  {
     files: ['**/*.test.ts'],
     plugins: { vitest },
     rules: vitest.configs.recommended.rules,

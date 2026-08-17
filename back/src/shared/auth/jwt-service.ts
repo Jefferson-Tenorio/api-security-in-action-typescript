@@ -3,10 +3,10 @@ import jwt from 'jsonwebtoken';
 import path from 'path';
 
 const privateKey = fs.readFileSync(
-  path.join(import.meta.dirname, '..', '..', 'private.pem'),
+  path.join(import.meta.dirname, '..', '..', '..', 'private.pem'),
 );
 const publicKey = fs.readFileSync(
-  path.join(import.meta.dirname, '..', '..', 'public.pem'),
+  path.join(import.meta.dirname, '..', '..', '..', 'public.pem'),
 );
 
 interface TokenPayload {
