@@ -1,15 +1,22 @@
+import type { NextFunction, Request, Response } from 'express';
+
 import { rateLimit } from 'express-rate-limit';
 
-export const defaultLimiter = rateLimit({
-  legacyHeaders: false,
-  limit: 100,
-  standardHeaders: true,
-  windowMs: 15 * 60 * 1000,
-});
+const isTest = process.env.NODE_ENV === 'test';
 
-export const writeLimiter = rateLimit({
-  legacyHeaders: false,
-  limit: 20, // POST/PUT/DELETE mais restrito
-  standardHeaders: true,
-  windowMs: 15 * 60 * 1000,
-});
+const bypass = (_req: Request, _res: Response, next: NextFunction): void => {
+  next();
+};
+
+function createLimiter(limit: number) {
+  if (isTest) return bypass;
+  return rateLimit({
+    legacyHeaders: false,
+    limit,
+    standardHeaders: true,
+    windowMs: 15 * 60 * 1000,
+  });
+}
+
+export const defaultLimiter = createLimiter(100);
+export const writeLimiter = createLimiter(20);

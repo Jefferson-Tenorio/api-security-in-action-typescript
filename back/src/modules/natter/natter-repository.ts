@@ -29,16 +29,18 @@ export class NatterRepository {
 
   // admin
   async deleteMessage(id: string, author: string): Promise<void> {
-    await this.conn`
+    const result = await this.conn`
       DELETE FROM messages WHERE id = ${id} AND author = ${author}
     `;
+    if (result.count === 0) throw HttpError.notFound('Message not found');
   }
 
   // admin
   async deleteSpace(id: string, owner: string): Promise<void> {
-    await this.conn`
+    const result = await this.conn`
       DELETE FROM spaces WHERE id = ${id} AND owner = ${owner}
     `;
+    if (result.count === 0) throw HttpError.notFound('Space not found');
   }
 
   // users
