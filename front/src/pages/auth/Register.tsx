@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API_BASE_URL } from '../../config'
 
 export function Register() {
   const [username, setUsername] = useState('')
@@ -7,7 +8,7 @@ export function Register() {
   const [error, setError] = useState('')
 
   async function handleRegister() {
-    const res = await fetch('https://localhost:3000/auth/register', {
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
@@ -50,11 +51,6 @@ export function Register() {
                                             value={username}
                                             onChange={e => setUsername(e.target.value)}
                                         ></input>
-                                    </div> 
-
-                                    <div className="flex flex-col gap-1.5 text-gray-400">
-                                        EMAIL
-                                        <input className="bg-gray-300 focus:outline-none px-1 py-0.5 text-black"></input>
                                     </div> 
 
                                     <div className="flex flex-col gap-1.5 text-gray-400">
