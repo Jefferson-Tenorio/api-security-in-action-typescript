@@ -1,13 +1,8 @@
 import postgres from 'postgres';
-import 'dotenv/config';
 
-const connectionStringAdmin = process.env.DATABASE_URL!
-if (!connectionStringAdmin) throw new Error('DATABASE_URL_ADMIN is not set');
+import { env } from '../../config/env.js';
 
-const connectionStringUser = process.env.DATABASE_URL!
-if (!connectionStringUser) throw new Error('DATABASE_URL_USER is not set');
+export const dbUser = postgres(env.databaseUrl);
+export const dbAdmin = postgres(env.databaseUrlAdmin);
 
-export const dbUser = postgres(connectionStringUser)
-export const dbAdmin = postgres(connectionStringAdmin)
-
-//TODO: Preciso orgnizar a parte de autenticação de rotas. Porém só após os testes.
+// TODO: Preciso orgnizar a parte de autenticação de rotas. Porém só após os testes.

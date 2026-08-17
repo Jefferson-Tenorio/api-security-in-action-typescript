@@ -3,6 +3,7 @@ import cors from 'cors';
 import express, { type Application } from 'express';
 import helmet from 'helmet';
 
+import { env } from './config/env.js';
 import { AuditModule } from './modules/audit_log/audit-module.js'
 import { NatterModule} from './modules/natter/natter-module.js'
 import { AuthModule } from './shared/auth/auth-module.js';
@@ -27,7 +28,7 @@ export class App {
     this.instance.disable('x-powered-by')
     this.instance.use(cors({
     credentials: true, 
-    origin: 'http://localhost:5173',               
+    origin: env.corsOrigin,               
     }));
     this.instance.use(express.json());
     this.instance.use(httpLogger);
