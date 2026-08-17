@@ -11,7 +11,7 @@ export function NatterRouter(controller: NatterController): Router {
 
   // messages
   router.post('/message', writeLimiter, controller.createMessage);
-  router.get('/message', defaultLimiter, controller.findAllMessage);
+  router.get('/message', defaultLimiter, controller.findAllMessages);
   router.get('/message/:id', defaultLimiter, controller.findByIdMessage);
   router.put('/message/:id', writeLimiter, controller.updateMessage);
   router.delete('/message/:id', writeLimiter, controller.deleteMessage);

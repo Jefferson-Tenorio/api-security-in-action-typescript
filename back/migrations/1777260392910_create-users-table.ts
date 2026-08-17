@@ -1,5 +1,8 @@
 import type { MigrationBuilder } from 'node-pg-migrate';
 
+// NOTE: the migration name is misleading — it creates roles, spaces and messages.
+// The users table is created in 1778005676735_users.ts.
+
 export async function down(pgm: MigrationBuilder): Promise<void> {
   pgm.sql(`
 -- remover vínculos

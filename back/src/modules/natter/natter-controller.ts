@@ -28,7 +28,7 @@ export class NatterController {
     res.status(204).end();
   });
 
-  findAllMessage = asyncHandler(async (_req: Request, res: Response) => {
+  findAllMessages = asyncHandler(async (_req: Request, res: Response) => {
     const messages = await this.service.findAllMessages();
     res.status(200).json(messages);
   });
