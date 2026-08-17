@@ -1,4 +1,5 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { Request, Response } from 'express';
+
 import { requestContext } from '../context/request-context.js'
 import { HttpError } from './http-error.js';
 
@@ -19,7 +20,6 @@ export const globalErrorHandler = (
   error: unknown, 
   _req: Request,
   res: Response,
-  _next: NextFunction,
 ) => {  
   if (error instanceof HttpError) {
     console.error(red("[ERROR]   "),"["+(requestContext.getStore()?.requestId)?.trim()+"]",error.statusCode, error.message);

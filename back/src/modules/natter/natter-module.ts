@@ -1,8 +1,8 @@
-import { NatterRepository } from './natter-repository.js'
-import { NatterService } from './natter-service.js'
-import { NatterController } from './natter-controller.js'
-import { CreateNatterRouter } from './natter-router.js'
 import { dbAdmin } from '../../shared/db/db.js'
+import { NatterController } from './natter-controller.js'
+import { NatterRepository } from './natter-repository.js'
+import { CreateNatterRouter } from './natter-router.js'
+import { NatterService } from './natter-service.js'
 
 export function NatterModule() {
   const repository = new NatterRepository(dbAdmin)
@@ -11,9 +11,9 @@ export function NatterModule() {
   const router = CreateNatterRouter(controller)
 
   return {
-    repository,
-    service,
     controller,
+    repository,
     router,
+    service,
   }
 }

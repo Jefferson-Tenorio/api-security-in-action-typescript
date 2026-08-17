@@ -1,20 +1,13 @@
 import { dbUser } from '../db/db.js';
 
 interface User {
-  id: string;
-  username: string;
-  password: string;
   created_at: Date;
+  id: string;
+  password: string;
+  username: string;
 }
 
 export class UserRepository {
-  async findByUsername(username: string): Promise<User | null> {
-    const [user] = await dbUser<User[]>`
-      SELECT * FROM users WHERE username = ${username}
-    `;
-    return user ?? null;
-  }
-
   async create(username: string, hashedPassword: string): Promise<User> {
     const [user] = await dbUser<User[]>`
       INSERT INTO users (username, password)
@@ -22,5 +15,12 @@ export class UserRepository {
       RETURNING * 
     `;
     return user as User;
+  }
+
+  async findByUsername(username: string): Promise<null | User> {
+    const [user] = await dbUser<User[]>`
+      SELECT * FROM users WHERE username = ${username}
+    `;
+    return user ?? null;
   }
 }

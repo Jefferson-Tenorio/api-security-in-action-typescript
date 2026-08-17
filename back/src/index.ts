@@ -1,10 +1,11 @@
-import { App } from './app.js';
-import https from 'https';
 import fs from 'fs';
+import https from 'https';
+
+import { App } from './app.js';
 
 const options = {
-  key:  fs.readFileSync('localhost+1-key.pem'),
   cert: fs.readFileSync('localhost+1.pem'),
+  key:  fs.readFileSync('localhost+1-key.pem'),
 };
 
 const app = new App();

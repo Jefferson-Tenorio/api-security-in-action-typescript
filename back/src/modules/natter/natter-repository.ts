@@ -1,20 +1,12 @@
 import postgres from 'postgres'
+
 import type { Message, Space} from './natter-service.js'
+
 import { HttpError} from '../../shared/error/http-error.js'
 
 export class NatterRepository {
 
   constructor(private readonly conn: postgres.Sql) {} 
-
-  //users
-  async createSpace(data: Space): Promise<Space> {
-    const [space] = await this.conn<Space[]>`
-      INSERT INTO spaces (name, owner)
-      VALUES (${data.name}, ${data.owner})
-      RETURNING *
-    `;
-    return space as Space;
-  }
 
   //users
   async createMessage(data: Message): Promise<Message>{
@@ -27,19 +19,27 @@ export class NatterRepository {
   }
 
   //users
-  async findByIdSpace(id: string): Promise<Space | null> {
+  async createSpace(data: Space): Promise<Space> {
     const [space] = await this.conn<Space[]>`
-      SELECT * FROM spaces WHERE id = ${id}
+      INSERT INTO spaces (name, owner)
+      VALUES (${data.name}, ${data.owner})
+      RETURNING *
     `;
-    return space ?? null;
+    return space as Space;
   }
 
-  //users    
-  async findByIdMessage(id: string): Promise<Message | null> {
-    const [message] = await this.conn<Message[]>`
-      SELECT * FROM messages WHERE id = ${id}
+  //admin
+  async deleteMessage(id: string): Promise<void> {
+    await this.conn<Message[]>`
+      DELETE FROM messages WHERE id = ${id}
     `;
-    return message ?? null;
+  }
+
+  //admin
+  async deleteSpace(id: string): Promise<void> {
+    await this.conn<Space[]>`
+      DELETE FROM spaces WHERE id = ${id}
+    `;
   }
 
   //users
@@ -51,25 +51,27 @@ export class NatterRepository {
   }
 
   //users
-  async findAllSpaces(): Promise<Space[] | null> {
+  async findAllSpaces(): Promise<null | Space[]> {
     const spaces = await this.conn<Space[]>`
       SELECT * FROM spaces;
     `;
     return spaces ?? null;
   }
 
-  //admin
-  async deleteSpace(id: string): Promise<void> {
-    const [space] = await this.conn<Space[]>`
-      DELETE FROM spaces WHERE id = ${id}
+  //users    
+  async findByIdMessage(id: string): Promise<Message | null> {
+    const [message] = await this.conn<Message[]>`
+      SELECT * FROM messages WHERE id = ${id}
     `;
+    return message ?? null;
   }
 
-  //admin
-  async deleteMessage(id: string): Promise<void> {
-    const [message] = await this.conn<Message[]>`
-      DELETE FROM messages WHERE id = ${id}
+  //users
+  async findByIdSpace(id: string): Promise<null | Space> {
+    const [space] = await this.conn<Space[]>`
+      SELECT * FROM spaces WHERE id = ${id}
     `;
+    return space ?? null;
   }
 
   //admin

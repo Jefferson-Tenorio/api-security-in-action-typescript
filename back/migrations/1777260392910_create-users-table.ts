@@ -1,5 +1,25 @@
 import type { MigrationBuilder } from 'node-pg-migrate';
 
+export async function down(pgm: MigrationBuilder): Promise<void> {
+  pgm.sql(`
+-- remover vínculos
+REVOKE app_read_write FROM app_user;
+REVOKE app_admin FROM admin_user;
+
+-- dropar users
+DROP USER app_user;
+DROP USER admin_user;
+
+-- dropar roles
+DROP ROLE app_read_write;
+DROP ROLE app_admin;
+
+-- dropar tabelas
+DROP TABLE messages;
+DROP TABLE spaces;
+    `);
+}
+
 export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.sql(`
 
@@ -44,24 +64,4 @@ GRANT app_admin TO admin_user;
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_admin;
 
   `)
-}
-
-export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.sql(`
--- remover vínculos
-REVOKE app_read_write FROM app_user;
-REVOKE app_admin FROM admin_user;
-
--- dropar users
-DROP USER app_user;
-DROP USER admin_user;
-
--- dropar roles
-DROP ROLE app_read_write;
-DROP ROLE app_admin;
-
--- dropar tabelas
-DROP TABLE messages;
-DROP TABLE spaces;
-    `);
 }

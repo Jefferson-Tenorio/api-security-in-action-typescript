@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
-import { verifyToken } from './jwt-service.js';
-import { HttpError } from '../error/http-error.js';
+
 import { requestContext } from '../context/request-context.js';
+import { HttpError } from '../error/http-error.js';
+import { verifyToken } from './jwt-service.js';
 
 export function authenticate(
   req: Request,

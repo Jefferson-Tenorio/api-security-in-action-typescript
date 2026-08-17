@@ -1,6 +1,5 @@
-import { authenticate } from './auth-middleware.js';
-
 import {Router} from 'express'
+
 import {AuthController} from './auth-controller.js'
 
 export function AuthRouter(controller: AuthController): Router{

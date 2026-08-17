@@ -1,5 +1,11 @@
 import type { MigrationBuilder } from 'node-pg-migrate';
 
+export async function down(pgm: MigrationBuilder): Promise<void> {
+  pgm.sql(`
+      DROP TABLE audit_logs;
+    `);
+}
+
 export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.sql(`
     CREATE TABLE audit_logs (
@@ -12,10 +18,4 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
       audit_time TIMESTAMPTZ DEFAULT NOW()
     )
   `)
-}
-
-export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.sql(`
-      DROP TABLE audit_logs;
-    `);
 }
