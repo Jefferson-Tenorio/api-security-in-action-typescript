@@ -10,15 +10,15 @@ export function authenticate(
   next: NextFunction,
 ): void {
   const token = req.cookies.token;
-  if (!token) return next(HttpError.unauthorized('Não autenticado'))
+  if (!token) return next(HttpError.unauthorized('Not authenticated'));
 
   try {
     const user = verifyToken(token);
     const store = requestContext.getStore();
-  if (!store) return next(new Error('RequestContext não inicializado'));
-  store.user = user;
+    if (!store) return next(new Error('RequestContext not initialized'));
+    store.user = user;
     next();
   } catch {
-    return next(HttpError.unauthorized('Token inválido ou expirado'));
+    return next(HttpError.unauthorized('Invalid or expired token'));
   }
 }
