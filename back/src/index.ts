@@ -1,15 +1,21 @@
-import { App } from './app.js';
-import https from 'https';
 import fs from 'fs';
+import https from 'https';
+import path from 'path';
+
+import { App } from './app.js';
+import { env } from './config/env.js';
 
 const options = {
-  key:  fs.readFileSync('localhost+1-key.pem'),
-  cert: fs.readFileSync('localhost+1.pem'),
+  cert: fs.readFileSync(
+    path.join(import.meta.dirname, '..', 'localhost+1.pem'),
+  ),
+  key: fs.readFileSync(
+    path.join(import.meta.dirname, '..', 'localhost+1-key.pem'),
+  ),
 };
 
 const app = new App();
-const port = Number(process.env.PORT) || 3000;
 
-https.createServer(options, app.instance).listen(port, () => {
-  console.log(`HTTPS rodando em https://localhost:${port}`);
+https.createServer(options, app.instance).listen(env.port, () => {
+  console.log(`HTTPS running on https://localhost:${env.port}`);
 });

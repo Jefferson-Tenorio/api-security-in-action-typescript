@@ -1,11 +1,11 @@
 import postgres from 'postgres';
 
 interface AuditEntry {
+  method: string;
+  path: string;
   requestId: string;
-  method:    string;
-  path:      string;
-  userId:    string;
-  status:    string;
+  status: string;
+  userId: string;
 }
 
 export class AuditRepository {

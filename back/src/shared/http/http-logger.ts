@@ -1,25 +1,27 @@
 import type { NextFunction, Request, Response } from 'express';
+
 import { randomUUID } from 'crypto';
+
 import { requestContext } from '../context/request-context.js';
 
+type LogEntry = RequestLog | ResponseLog;
+
 interface RequestLog {
-  type: 'request';
-  requestId: string;
+  body: unknown;
   method: string;
   path: string;
   query: Record<string, unknown>;
-  body: unknown;
+  requestId: string;
+  type: 'request';
 }
 
 interface ResponseLog {
-  type: 'response';
+  body: unknown;
+  durationMs: number;
   requestId: string;
   status: number;
-  durationMs: number;
-  body: unknown;
+  type: 'response';
 }
-
-type LogEntry = RequestLog | ResponseLog;
 
 export function httpLogger(
   req: Request,
@@ -31,22 +33,22 @@ export function httpLogger(
 
   requestContext.run({ requestId }, () => {
     log({
-      type: 'request',
-      requestId,
+      body: req.body as unknown,
       method: req.method,
       path: req.path,
       query: req.query,
-      body: req.body as unknown,
+      requestId,
+      type: 'request',
     });
 
     const originalJson = res.json.bind(res);
     res.json = (body: unknown): Response => {
       log({
-        type: 'response',
+        body,
+        durationMs: Date.now() - start,
         requestId,
         status: res.statusCode,
-        durationMs: Date.now() - start,
-        body,
+        type: 'response',
       });
       return originalJson(body);
     };
@@ -73,6 +75,8 @@ function formatEntry(entry: LogEntry): string {
 function log(entry: LogEntry): void {
   console.log(formatEntry(entry));
   if (entry.type === 'response') {
-  console.log('\x1b[90m' + '·'.repeat(process.stdout.columns || 50) + '\x1b[0m')
+    console.log(
+      '\x1b[90m' + '·'.repeat(process.stdout.columns || 50) + '\x1b[0m',
+    );
   }
 }

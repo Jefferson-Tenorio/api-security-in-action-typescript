@@ -1,6 +1,6 @@
 # API Security in Action
 
-A hands-on implementation of 'API Security in Action' by Neil Madden, built in TypeScript. Covers authentication, authorization, rate limiting, security configs and real decisions behind building secure APIs 
+A hands-on implementation of 'API Security in Action' by Neil Madden, built in TypeScript. Covers authentication, authorization, rate limiting, security configs and real decisions behind building secure APIs
 
 ## Table of Contents
 
@@ -9,13 +9,14 @@ A hands-on implementation of 'API Security in Action' by Neil Madden, built in T
 3. [OpenSSL](#openssl)
 4. [Mkcert](#mkcert)
 5. [CORs & Helmet](#cors--helmet)
+6. [Migrations](#migrations)
 
-
-## OpenSSL  
+## OpenSSL
 
 É um projeto open source que implementa protocolos de comunicação segura (TLS/SSL) e uma biblioteca de criptgrafia de propósito geral, acompanhado de ferramentas de linhas de comando.
 
 Composto por:
+
 - libcrypto -> AES, RSA, ECC, SHA, HMAC..., gera chaves, assinatura digital e funções de hash.
 - libssl -> implementação de protocolos (TSL 1.2/1.3), handshake, negociação de cifra, gerenciamento de sessão segura.
 - cli -> interface, gerar certificados, testar conexão TLS, criptografar e descriptgrafar dados.
@@ -23,6 +24,7 @@ Composto por:
 Principais comandos:
 
 Gerar par de chaves RSA 2048:
+
 ```bash
 # gera a chave privada
 openssl genrsa -out private.pem 2048
@@ -31,6 +33,7 @@ openssl rsa -in private.pem -pubout -out public.pem
 ```
 
 Confirmar se o par de chaves gera o mesmo valor:
+
 ```bash
 # confirmar que o par bate — os dois devem gerar o mesmo hash
 openssl rsa -in private.pem -pubout | openssl md5
@@ -38,6 +41,7 @@ openssl rsa -in public.pem -pubin | openssl md5
 ```
 
 Usos:
+
 ```javascript
 export function signToken(payload: TokenPayload): string {
   return jwt.sign(payload, privateKey, {
@@ -53,10 +57,10 @@ export function verifyToken(token: string): TokenPayload {
 }
 ```
 
-
 ## mkcert
 
 Antes disso você instala o mkcert
+
 ```bash
 # Instala o mkcert
 sudo apt install mkcert
@@ -77,7 +81,7 @@ Agora você habilita essa configuração para dentro do server.ts
 
 ```javascript
 const options = {
-  key:  fs.readFileSync('localhost+1-key.pem'),
+  key: fs.readFileSync('localhost+1-key.pem'),
   cert: fs.readFileSync('localhost+1.pem'),
 };
 
@@ -93,6 +97,21 @@ https.createServer(options, app.instance).listen(port, () => {
 
 Segurança http.
 
+## Migrations
+
+Antes de rodar o servidor pela primeira vez (ou sempre que houver novas migrations), aplique-as no banco:
+
+```bash
+pnpm migrate:up
+```
+
+Depois, inicie o servidor:
+
+```bash
+pnpm dev:env
+```
+
+> O servidor espera as tabelas `users`, `spaces`, `messages` e `audit_logs` existirem no banco — sem rodar `migrate:up`, os endpoints retornam `500`.
 
 ## Roadmaps
 
@@ -101,4 +120,3 @@ Segurança http.
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://roadmap.sh/nodejs)
 [![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://roadmap.sh/nextjs)
 [![Backend](https://img.shields.io/badge/Backend-0A0A0A?style=for-the-badge&logo=server&logoColor=white)](https://roadmap.sh/backend)
-

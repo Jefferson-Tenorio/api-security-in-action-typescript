@@ -30,6 +30,10 @@ export class HttpError extends Error {
     return new HttpError(message, 400, errors);
   }
 
+  static conflict(message: string): HttpError {
+    return new HttpError(message, 409);
+  }
+
   static forbidden(message: string = 'Forbidden'): HttpError {
     return new HttpError(message, 403);
   }
@@ -42,25 +46,6 @@ export class HttpError extends Error {
     return new HttpError(message, 404);
   }
 
-  static unauthorized(message: string): HttpError {
-    return new HttpError(message, 401);
-  }
-
-  static conflict(message: string): HttpError {
-    return new HttpError(message, 409);
-  }
-
-  static unprocessable(
-    message: string,
-    errors: ValidationError[] = [],
-  ): HttpError {
-    return new HttpError(message, 422, errors);
-  }
-
-  static tooManyRequests(message: string = 'Too many requests'): HttpError {
-    return new HttpError(message, 429);
-  }
-
   static notImplemented(message: string = 'Not implemented'): HttpError {
     return new HttpError(message, 501);
   }
@@ -69,5 +54,20 @@ export class HttpError extends Error {
     message: string = 'Service unavailable',
   ): HttpError {
     return new HttpError(message, 503);
+  }
+
+  static tooManyRequests(message: string = 'Too many requests'): HttpError {
+    return new HttpError(message, 429);
+  }
+
+  static unauthorized(message: string): HttpError {
+    return new HttpError(message, 401);
+  }
+
+  static unprocessable(
+    message: string,
+    errors: ValidationError[] = [],
+  ): HttpError {
+    return new HttpError(message, 422, errors);
   }
 }

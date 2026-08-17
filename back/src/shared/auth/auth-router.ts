@@ -1,13 +1,12 @@
-import { authenticate } from './auth-middleware.js';
+import { Router } from 'express';
 
-import {Router} from 'express'
-import {AuthController} from './auth-controller.js'
+import { AuthController } from './auth-controller.js';
 
-export function AuthRouter(controller: AuthController): Router{
-    const router = Router()
+export function AuthRouter(controller: AuthController): Router {
+  const router = Router();
 
-    router.post('/register', controller.register)
-    router.post('/login', controller.login)
+  router.post('/register', controller.register);
+  router.post('/login', controller.login);
 
-  return router
+  return router;
 }

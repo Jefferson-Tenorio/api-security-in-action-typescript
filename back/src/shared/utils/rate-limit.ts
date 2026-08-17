@@ -1,15 +1,15 @@
-import { rateLimit } from 'express-rate-limit'
+import { rateLimit } from 'express-rate-limit';
 
 export const defaultLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  legacyHeaders: false,
   limit: 100,
   standardHeaders: true,
-  legacyHeaders: false,
-})
+  windowMs: 15 * 60 * 1000,
+});
 
 export const writeLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  legacyHeaders: false,
   limit: 20, // POST/PUT/DELETE mais restrito
   standardHeaders: true,
-  legacyHeaders: false,
+  windowMs: 15 * 60 * 1000,
 });
