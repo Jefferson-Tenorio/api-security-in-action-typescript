@@ -131,7 +131,7 @@ back/
 │   ├── public.pem          # chave pública JWT (RS256)
 │   ├── localhost+1.pem     # certificado TLS (mkcert)
 │   └── localhost+1-key.pem # chave privada TLS (mkcert)
-├── docs/                   # documentação (setup, fluxos)
+├── docs/                   # documentação (setup, fluxos, auditoria semântica)
 ├── migrations/             # migrations SQL (node-pg-migrate)
 ├── src/
 │   ├── index.ts            # entrypoint HTTPS
@@ -156,6 +156,13 @@ back/
 ```
 
 Cada módulo segue o mesmo padrão: `controller` (HTTP) → `service` (regras de negócio) → `repository` (SQL) → `router` (rotas), montados por um `*-module.ts`.
+
+## Documentação
+
+- [Setup](./docs/setup.md) — instalação do ambiente
+- [Fluxos](./docs/fluxos.md) — diagramas de dados, fluxo da API e contratos de endpoints
+- [Auditoria semântica](./docs/SEMANTIC-AUDIT.md) — findings com evidência no código
+- [Roadmap semântico](./docs/SEMANTIC-ROADMAP.md) — mudanças justificadas pela auditoria
 
 ## Roadmaps
 
