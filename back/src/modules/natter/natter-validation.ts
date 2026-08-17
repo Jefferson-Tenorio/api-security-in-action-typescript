@@ -7,8 +7,7 @@ export function isMessage(raw: unknown): raw is Message {
 
   return (
     typeof normalized.content === 'string' &&
-    typeof normalized.space_id === 'string' &&
-    typeof normalized.author === 'string'
+    typeof normalized.space_id === 'string'
   );
 }
 
@@ -17,7 +16,5 @@ export function isSpace(raw: unknown): raw is Space {
 
   const normalized = raw as Record<string, unknown>;
 
-  return (
-    typeof normalized.name === 'string' && typeof normalized.owner === 'string'
-  );
+  return typeof normalized.name === 'string';
 }

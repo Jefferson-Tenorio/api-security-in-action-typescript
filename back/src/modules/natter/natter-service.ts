@@ -1,5 +1,6 @@
 import type { Message, Space } from './natter-types.js';
 
+import { requestContext } from '../../shared/context/request-context.js';
 import { HttpError } from '../../shared/error/http-error.js';
 import { NatterRepository } from './natter-repository.js';
 
@@ -7,53 +8,55 @@ export class NatterService {
   constructor(private readonly natterRepo: NatterRepository) {}
 
   async createMessage(data: Message): Promise<Message> {
-    return this.natterRepo.createMessage(data);
+    return this.natterRepo.createMessage(data, this.getUsername());
   }
 
   async createSpace(data: Space): Promise<Space> {
-    return this.natterRepo.createSpace(data);
+    return this.natterRepo.createSpace(data, this.getUsername());
   }
 
   async deleteMessage(id: string): Promise<void> {
-    await this.natterRepo.deleteMessage(id);
+    await this.natterRepo.deleteMessage(id, this.getUsername());
   }
 
   async deleteSpace(id: string): Promise<void> {
-    await this.natterRepo.deleteSpace(id);
+    await this.natterRepo.deleteSpace(id, this.getUsername());
   }
 
   async findAllMessages(): Promise<Message[]> {
     const result = await this.natterRepo.findAllMessages();
-    if (!result) throw HttpError.unprocessable('Entity not found');
+    if (!result) throw HttpError.notFound('Messages not found');
     return result;
   }
 
   async findAllSpaces(): Promise<Space[]> {
     const result = await this.natterRepo.findAllSpaces();
-    if (!result) throw HttpError.unprocessable('Entity not found');
+    if (!result) throw HttpError.notFound('Spaces not found');
     return result;
   }
 
   async findByIdMessage(id: string): Promise<Message> {
     if (!id) throw HttpError.badRequest('Id cannot be empty');
     const result = await this.natterRepo.findByIdMessage(id);
-    if (!result) throw HttpError.unprocessable('Entity not found');
+    if (!result) throw HttpError.notFound('Message not found');
     return result;
   }
 
   async findByIdSpace(id: string): Promise<Space> {
     if (!id) throw HttpError.badRequest('Id cannot be empty');
     const result = await this.natterRepo.findByIdSpace(id);
-    if (!result) throw HttpError.unprocessable('Entity not found');
+    if (!result) throw HttpError.notFound('Space not found');
     return result;
   }
 
   async updateMessage(id: string, content: string): Promise<Message> {
     if (!content) throw HttpError.badRequest('Content cannot be empty');
-    return this.natterRepo.updateMessage(id, content);
+    return this.natterRepo.updateMessage(id, content, this.getUsername());
+  }
+
+  private getUsername(): string {
+    const user = requestContext.getStore()?.user;
+    if (!user) throw HttpError.unauthorized('Not authenticated');
+    return user.username;
   }
 }
-
-// TODO: Observar os erros e as regras de negócio e organizar o código e a role de quem pode logar e quem não pode porque eu mudei o db
-// TODO: [a-zA-Z][a-zA-Z0-9]{1,29}
-// TODO: Tip In a real project, you could confirm the user's identity during registration (by sending them an email or validating their credit card, for example), or you might use an existing user repository and not allow users to self-register.
