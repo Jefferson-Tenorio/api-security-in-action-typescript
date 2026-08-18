@@ -24,7 +24,9 @@ export class AuthController {
     res.status(200).json({ message: 'Login successful' });
   });
 
-  logout = asyncHandler(async (_req: Request, res: Response) => {
+  logout = asyncHandler(async (req: Request, res: Response) => {
+    const token = typeof req.cookies.token === 'string' ? req.cookies.token : undefined;
+    await this.service.logout(token);
     res.clearCookie('token', COOKIE_OPTIONS);
     res.status(200).json({ message: 'Logged out' });
   });

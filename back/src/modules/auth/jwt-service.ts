@@ -9,7 +9,11 @@ export interface TokenPayload {
 
 export interface TokenService {
   sign(payload: Omit<TokenPayload, 'jti'>): string;
-  verify(token: string): TokenPayload;
+  verify(token: string): VerifiedToken;
+}
+
+export interface VerifiedToken extends TokenPayload {
+  exp?: number;
 }
 
 export class JwtService implements TokenService {
@@ -31,11 +35,11 @@ export class JwtService implements TokenService {
     });
   }
 
-  verify(token: string): TokenPayload {
+  verify(token: string): VerifiedToken {
     return jwt.verify(token, this.publicKey, {
       algorithms: ['RS256'],
       audience: this.audience,
       issuer: this.issuer,
-    }) as TokenPayload;
+    }) as VerifiedToken;
   }
 }
