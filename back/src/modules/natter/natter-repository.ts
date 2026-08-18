@@ -39,17 +39,28 @@ export class NatterRepository {
     if (result.count === 0) throw HttpError.notFound('Space not found');
   }
 
-  async findAllMessages(author: string): Promise<MessageView[] | null> {
+  async findAllMessages(
+    author: string,
+    limit: number,
+    offset: number,
+  ): Promise<MessageView[] | null> {
     return this.conn<MessageView[]>`
       SELECT m.id, m.author, m.msg_text AS content, m.msg_time, m.space_id
       FROM messages m JOIN spaces s ON m.space_id = s.id
       WHERE m.author = ${author}
+      LIMIT ${limit} OFFSET ${offset}
     `;
   }
 
-  async findAllSpaces(owner: string): Promise<null | SpaceView[]> {
+  async findAllSpaces(
+    owner: string,
+    limit: number,
+    offset: number,
+  ): Promise<null | SpaceView[]> {
     return this.conn<SpaceView[]>`
-      SELECT id, name, owner FROM spaces WHERE owner = ${owner};
+      SELECT id, name, owner FROM spaces
+      WHERE owner = ${owner}
+      LIMIT ${limit} OFFSET ${offset}
     `;
   }
 

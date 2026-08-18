@@ -1,6 +1,7 @@
 import type { TokenPayload } from '../auth/jwt-service.js';
 import type { NatterRepository } from './natter-repository.js';
 import type { Message, MessageView, Space, SpaceView } from './natter-types.js';
+import type { ListQuery } from './natter-validation.js';
 
 import { HttpError } from '../../shared/error/http-error.js';
 
@@ -28,17 +29,21 @@ export class NatterService {
     await this.natterRepo.deleteSpace(id, this.getCurrentUser().username);
   }
 
-  async findAllMessages(): Promise<MessageView[]> {
+  async findAllMessages(listQuery: ListQuery): Promise<MessageView[]> {
     const result = await this.natterRepo.findAllMessages(
       this.getCurrentUser().username,
+      listQuery.limit,
+      listQuery.offset,
     );
     if (!result) throw HttpError.notFound('Messages not found');
     return result;
   }
 
-  async findAllSpaces(): Promise<SpaceView[]> {
+  async findAllSpaces(listQuery: ListQuery): Promise<SpaceView[]> {
     const result = await this.natterRepo.findAllSpaces(
       this.getCurrentUser().username,
+      listQuery.limit,
+      listQuery.offset,
     );
     if (!result) throw HttpError.notFound('Spaces not found');
     return result;
