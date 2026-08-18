@@ -29,25 +29,35 @@ export class NatterService {
   }
 
   async findAllMessages(): Promise<MessageView[]> {
-    const result = await this.natterRepo.findAllMessages();
+    const result = await this.natterRepo.findAllMessages(
+      this.getCurrentUser().username,
+    );
     if (!result) throw HttpError.notFound('Messages not found');
     return result;
   }
 
   async findAllSpaces(): Promise<SpaceView[]> {
-    const result = await this.natterRepo.findAllSpaces();
+    const result = await this.natterRepo.findAllSpaces(
+      this.getCurrentUser().username,
+    );
     if (!result) throw HttpError.notFound('Spaces not found');
     return result;
   }
 
   async findByIdMessage(id: number): Promise<MessageView> {
-    const result = await this.natterRepo.findByIdMessage(id);
+    const result = await this.natterRepo.findByIdMessage(
+      id,
+      this.getCurrentUser().username,
+    );
     if (!result) throw HttpError.notFound('Message not found');
     return result;
   }
 
   async findByIdSpace(id: number): Promise<SpaceView> {
-    const result = await this.natterRepo.findByIdSpace(id);
+    const result = await this.natterRepo.findByIdSpace(
+      id,
+      this.getCurrentUser().username,
+    );
     if (!result) throw HttpError.notFound('Space not found');
     return result;
   }
