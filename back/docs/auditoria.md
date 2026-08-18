@@ -1,7 +1,7 @@
 # Auditoria de Features de API Security
 
 Projeto: Natter — API Security in Action (TypeScript)
-Data: 2026-08-18
+Data: 2026-08-18 (atualizada em 2026-08-18 — correções P0 aplicadas na branch `security/hardening`)
 
 Regra aplicada: nenhuma feature foi marcada como implementada apenas por existir biblioteca, dependência ou nome sugestivo no projeto. Toda marcação tem evidência concreta (arquivo:linha, comportamento observado).
 
@@ -56,15 +56,15 @@ Gaps: sem refresh token, sem revogação, sem lockout por conta; `register`/`log
 | Roles/perfis | AUSENTE (só no banco) | roles `app_read_write`/`app_admin` existem só na migração (`migrations/1777260392910_create-users-table.ts:30-31`) |
 | Permissions/scopes | AUSENTE | |
 | RBAC | AUSENTE | |
-| Controle por recurso | PARCIAL | escrita protegida; **leitura expõe tudo** |
-| Proteção BOLA/IDOR | PARCIAL | **vulnerável na leitura**: `findAllMessages`, `findByIdMessage`, `findAllSpaces`, `findByIdSpace` **sem filtro de autor/owner** (`natter-repository.ts:47-76`) — qualquer autenticado lê mensagens/espaços de todos |
-| Só acessa o que é seu | PARCIAL | writes: sim; reads: não |
+| Controle por recurso | IMPLEMENTADO | escrita protegida; leitura protegida após fix (P0) |
+| Proteção BOLA/IDOR | CORRIGIDO (P0) | reads filtrados por `author`/`owner` (`natter-repository.ts:47-76`); recurso alheio → 404. Regressão: `src/security/bola.test.ts` |
+| Só acessa o que é seu | IMPLEMENTADO | writes e reads: sim (testes `bola.test.ts`) |
 | Ownership validado | IMPLEMENTADO (writes) | `WHERE id = $ AND author = $` / `owner` |
 | Endpoints admin protegidos | N/A | não existem endpoints admin |
 | Least privilege | PARCIAL | bom no banco (roles distintas); na app não há níveis |
 | Autorização no servidor | IMPLEMENTADO | toda checagem em SQL, identidade vem da sessão (teste `app.test.ts:90-111`) |
 
-Principal achado da auditoria: BOLA/IDOR de leitura — `GET /natter/message`, `/natter/message/:id`, `/natter/space`, `/natter/space/:id` retornam recursos de qualquer usuário.
+Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `security/hardening` com testes de regressão em `src/security/bola.test.ts`.
 
 ---
 
@@ -72,9 +72,9 @@ Principal achado da auditoria: BOLA/IDOR de leitura — `GET /natter/message`, `
 
 | Item | Status | Evidência |
 |---|---|---|
-| Inputs validados | PARCIAL | só natter (`isMessage`/`isSpace`/`isContent`); `register`/`login` nada |
-| Schema validation | AUSENTE | guards manuais, sem lib |
-| Body validado | PARCIAL | `natter-validation.ts:3-29` |
+| Inputs validados | PARCIAL | auth validado com zod (P0); natter ainda com guards manuais |
+| Schema validation | PARCIAL | zod em `auth-schemas.ts` (register/login, strict); natter pendente |
+| Body validado | PARCIAL | `auth-schemas.ts` (zod) + `natter-validation.ts:3-29` |
 | Query params validados | N/A | nenhum endpoint usa query |
 | Path params validados | IMPLEMENTADO | `parseId` rejeita não-inteiro/≤0 (`natter-validation.ts:37-44`) |
 | Headers validados | AUSENTE | sem checagem de Content-Type |
@@ -94,7 +94,7 @@ Principal achado da auditoria: BOLA/IDOR de leitura — `GET /natter/message`, `
 | Dados sensíveis identificados | PARCIAL | senha, chaves RSA, credenciais DB |
 | Sensíveis fora das respostas | IMPLEMENTADO | `register` retorna só `{id, username}` (`auth-service.ts:30`); nunca password |
 | Senhas nunca retornadas | IMPLEMENTADO | `User.password` usado só internamente (`user-repository.ts`) |
-| Secrets hardcoded | PARCIAL | `.env`/`.env.example` ok e chaves não versionadas — **mas migração commita senhas de roles do banco**: `CREATE USER app_user PASSWORD 'user'` e `admin_user PASSWORD 'admin'` (`migrations/...create-users-table.ts:34-35`) |
+| Secrets hardcoded | PARCIAL | `.env`/`.env.example` ok e chaves não versionadas; senhas de roles do banco removidas (migração `1787063356263_drop-app-roles.ts`, P0) |
 | Variáveis de ambiente | IMPLEMENTADO | `env.ts` com `required()` |
 | Dados em repouso | N/A | sem dados regulados; senhas já protegidas |
 | TLS/HTTPS | IMPLEMENTADO | `https.createServer` (`index.ts:19`); certificados dev localhost |
@@ -181,8 +181,8 @@ Principal achado da auditoria: BOLA/IDOR de leitura — `GET /natter/message`, `
 | Item | Status | Evidência |
 |---|---|---|
 | Processo de atualização | AUSENTE | sem dependabot/renovate |
-| Análise de vulnerabilidades | AUSENTE | `pnpm audit` não está em nenhum script |
-| Dependências desnecessárias | PARCIAL | `pg` e `@types/pg` mortos (`package.json`, nenhum import) |
+| Análise de vulnerabilidades | PARCIAL | `pnpm audit --audit-level high` no CI (`.github/workflows/ci.yml`) |
+| Dependências desnecessárias | PARCIAL | `pg` e `@types/pg` mortos (`package.json`, nenhum import) — remoção pendente |
 | Docker seguro | PARCIAL | imagem oficial `node:22-alpine`, `USER node` (não-root) ✔; **sem `.dockerignore`** (node_modules/chaves do host podem entrar), `npm install` sem lockfile, `CMD` roda servidor dev (`Dockerfile:5-9`) |
 | Container não-root | IMPLEMENTADO | `USER node` |
 | Secrets na imagem | PARCIAL | `COPY . .` + sem `.dockerignore` → `certs/private.pem` iria para a imagem |
@@ -199,14 +199,14 @@ Principal achado da auditoria: BOLA/IDOR de leitura — `GET /natter/message`, `
 |---|---|---|
 | Autenticação | IMPLEMENTADO | `app.test.ts:33-80` |
 | Autorização | IMPLEMENTADO | ownership write (`app.test.ts:147-170`) |
-| Acesso indevido a recursos | PARCIAL | só escrita; **não testa vazamento de leitura** |
-| Validação de entrada | AUSENTE | nenhum teste de 400 |
+| Acesso indevido a recursos | IMPLEMENTADO | `bola.test.ts` — listagem e acesso por id (404) |
+| Validação de entrada | IMPLEMENTADO (auth) | `input-validation.test.ts` — 9 cenários negativos (400) |
 | Endpoints admin | N/A | |
 | Rate limiting | AUSENTE | limiter é bypass em teste (`rate-limit.ts:5-9`) |
 | Cenários negativos | PARCIAL | 401/404/409 cobertos |
 | Integração de segurança | IMPLEMENTADO | supertest sobre `App` real com banco |
 | Teste contra vulns conhecidas | AUSENTE | sem OWASP ZAP/trivy etc. |
-| Segurança no CI/CD | AUSENTE | não existe CI/CD nenhum |
+| Segurança no CI/CD | IMPLEMENTADO | `.github/workflows/ci.yml` — lint → type-check → build → test → `pnpm audit` com Postgres service container |
 
 ---
 
@@ -229,9 +229,9 @@ Principal achado da auditoria: BOLA/IDOR de leitura — `GET /natter/message`, `
 
 ## 13. Classificação final
 
-**IMPLEMENTADO (20):** auth JWT RS256 com algoritmo fixo · expiração · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · rate limit · ownership em escrita · mass assignment coberto · SQLi protegido · parsing de id · erro centralizado/formato único · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · container não-root · testes de contrato auth+authz.
+**IMPLEMENTADO (22):** auth JWT RS256 com algoritmo fixo · expiração · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · rate limit · ownership em escrita **e leitura (P0)** · mass assignment coberto · SQLi protegido · parsing de id · **validação zod em auth (P0)** · erro centralizado/formato único · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · container não-root · testes de contrato auth+authz · **testes BOLA e input validation (P0)** · **CI/CD com audit de dependências (P0)**.
 
-**PARCIAL (10):** claims JWT · validação de entrada (register/login sem) · BOLA/IDOR (escrita ok, leitura vulnerável) · payload size implícito · logs não-JSON · audit sem eventos semânticos · Dockerfile (lockfile/dockerignore/dev CMD) · dependências mortas · testes (sem 400, sem rate limit, sem leitura) · confidencialidade XSS (nada renderiza hoje).
+**PARCIAL (8):** claims JWT · validação de entrada (natter ainda com guards manuais) · payload size implícito · logs não-JSON · audit sem eventos semânticos · Dockerfile (lockfile/dockerignore/dev CMD) · dependências mortas · confidencialidade XSS (nada renderiza hoje).
 
 **AUSENTE (12):** refresh token · revogação · RBAC/scopes · timeout · paginação · métricas · alertas · CI/CD · audit de dependências · testes de validação/rate-limit · versionamento · política de senha/validação de registro.
 
@@ -245,30 +245,30 @@ Principal achado da auditoria: BOLA/IDOR de leitura — `GET /natter/message`, `
 
 ### Vulnerabilidades encontradas
 
-1. **[MÉDIO] BOLA/IDOR de leitura** — qualquer usuário autenticado lê todas as messages/spaces (`natter-repository.ts:47-76`).
-2. **[BAIXO] Sem revogação de token** — logout é cosmético; JWT sobrevive 15min.
-3. **[BAIXO] Sem paginação + rate limit por IP** — consumo de recurso e limpeza de dados sem fronteiras; limitador contornável por rotação de IP.
+1. **[MÉDIO] BOLA/IDOR de leitura** — **CORRIGIDO (P0)**: reads filtrados por owner/author; recurso alheio → 404; regressão em `src/security/bola.test.ts`.
+2. **[BAIXO] Sem revogação de token** — logout é cosmético; JWT sobrevive 15min. Pendente (Fase P2: `jti` + deny-list).
+3. **[BAIXO] Sem paginação + rate limit por IP** — consumo de recurso sem fronteiras; limitador contornável por rotação de IP. Pendente (Fase P1/P2).
 
 ### Misconfigurations encontradas
 
-- Senhas de roles do banco versionadas na migração (`'user'`/`'admin'`).
-- Sem `.dockerignore` + `npm install` sem lockfile + CMD dev no Dockerfile.
-- Docs drift: `fluxos.md` descreve front que não corresponde ao código atual; README aponta caminho de chaves errado (`back/private.pem` vs `back/certs/`).
-- `pg`/`@types/pg` instalados e não usados.
+- Senhas de roles do banco versionadas na migração — **CORRIGIDO (P0)**: migração `1787063356263_drop-app-roles` remove as roles (up/down verificados).
+- Sem `.dockerignore` + `npm install` sem lockfile + CMD dev no Dockerfile. Pendente (Fase P1).
+- Docs drift: `fluxos.md` descreve front que não corresponde ao código atual; README aponta caminho de chaves errado (`back/private.pem` vs `back/certs/`). Pendente.
+- `pg`/`@types/pg` instalados e não usados. Pendente (Fase P1).
 
 ### Débitos de segurança
 
-- Validação zero em register/login (nome de usuário >50 chars → 500 do Postgres).
-- Sem testes para todos os caminhos 400/422 e para vazamento de leitura.
-- Sem CI: lint/type-check/teste/audit rodam só manualmente.
+- ~~Validação zero em register/login~~ — **CORRIGIDO (P0)** com zod (`auth-schemas.ts`).
+- Sem testes para caminhos 400 — **CORRIGIDO (P0)** (`input-validation.test.ts`).
+- Sem CI — **CORRIGIDO (P0)** (`.github/workflows/ci.yml`).
 
 ### Quick wins (1–2h)
 
-- Filtrar leituras por autor/owner + teste de regressão (BOLA).
-- Validar register/login (strings não vazias, limites) + teste 400.
+- ~~Filtrar leituras por autor/owner + teste de regressão (BOLA)~~ — feito (P0).
+- ~~Validar register/login (strings não vazias, limites) + teste 400~~ — feito (P0, zod).
 - `.dockerignore` + `pnpm install --frozen-lockfile` + `CMD ["pnpm","start"]` no Dockerfile.
-- Remover `pg`/`@types/pg`; adicionar script `pnpm audit`.
-- Remover senhas das migrações (variáveis de ambiente).
+- Remover `pg`/`@types/pg`; ~~adicionar script `pnpm audit`~~ — feito (P0, no CI).
+- ~~Remover senhas das migrações~~ — feito (P0).
 
 ### Riscos críticos
 
