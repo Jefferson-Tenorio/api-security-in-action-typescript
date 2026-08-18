@@ -25,7 +25,7 @@ export const globalErrorHandler = (
   if (error instanceof HttpError) {
     console.error(
       red('[ERROR]   '),
-      '[' + requestContext.getStore()?.requestId?.trim() + ']',
+      '[' + requestContext.getRequestId()?.trim() + ']',
       error.statusCode,
       error.message,
     );

@@ -1,7 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
 
-import { randomUUID } from 'crypto';
-
 import { requestContext } from '../context/request-context.js';
 
 type LogEntry = RequestLog | ResponseLog;
@@ -30,33 +28,31 @@ export function httpLogger(
   res: Response,
   next: NextFunction,
 ): void {
-  const requestId = randomUUID();
+  const requestId = requestContext.getRequestId() ?? 'unknown';
   const start = Date.now();
 
-  requestContext.run({ requestId }, () => {
-    log({
-      body: sanitize(req.body),
-      method: req.method,
-      path: req.path,
-      query: req.query,
-      requestId,
-      type: 'request',
-    });
-
-    const originalJson = res.json.bind(res);
-    res.json = (body: unknown): Response => {
-      log({
-        body,
-        durationMs: Date.now() - start,
-        requestId,
-        status: res.statusCode,
-        type: 'response',
-      });
-      return originalJson(body);
-    };
-
-    next();
+  log({
+    body: sanitize(req.body),
+    method: req.method,
+    path: req.path,
+    query: req.query,
+    requestId,
+    type: 'request',
   });
+
+  const originalJson = res.json.bind(res);
+  res.json = (body: unknown): Response => {
+    log({
+      body,
+      durationMs: Date.now() - start,
+      requestId,
+      status: res.statusCode,
+      type: 'response',
+    });
+    return originalJson(body);
+  };
+
+  next();
 }
 
 function formatEntry(entry: LogEntry): string {

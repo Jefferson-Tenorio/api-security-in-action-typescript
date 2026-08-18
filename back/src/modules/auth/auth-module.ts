@@ -1,0 +1,31 @@
+import fs from 'fs';
+
+import { env } from '../../config/env.js';
+import { dbUser } from '../../shared/db/db.js';
+import { AuthController } from './auth-controller.js';
+import { AuthRouter } from './auth-router.js';
+import { AuthService } from './auth-service.js';
+import { createAuthenticate } from './authenticate-middleware.js';
+import { JwtService } from './jwt-service.js';
+import { PgUserRepository } from './user-repository.js';
+
+export function AuthModule() {
+  const repository = new PgUserRepository(dbUser);
+  const tokenService = new JwtService(
+    fs.readFileSync(env.jwt.privateKeyPath),
+    fs.readFileSync(env.jwt.publicKeyPath),
+    env.jwt.expiresInMs,
+  );
+  const service = new AuthService(repository, tokenService);
+  const controller = new AuthController(service);
+  const router = AuthRouter(controller);
+  const authenticate = createAuthenticate(tokenService);
+
+  return {
+    authenticate,
+    controller,
+    repository,
+    router,
+    service,
+  };
+}

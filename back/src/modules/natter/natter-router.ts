@@ -1,10 +1,14 @@
+import type { RequestHandler } from 'express';
+
 import { Router } from 'express';
 
-import { authenticate } from '../../shared/auth/auth-middleware.js';
 import { defaultLimiter, writeLimiter } from '../../shared/utils/rate-limit.js';
 import { NatterController } from './natter-controller.js';
 
-export function NatterRouter(controller: NatterController): Router {
+export function NatterRouter(
+  controller: NatterController,
+  authenticate: RequestHandler,
+): Router {
   const router = Router();
 
   router.use(authenticate);

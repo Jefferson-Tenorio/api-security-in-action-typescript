@@ -5,16 +5,17 @@ import { AuditRepository } from './audit-repository.js';
 
 export function createAuditMiddleware(repository: AuditRepository) {
   return function audit(req: Request, res: Response, next: NextFunction) {
-    const store = requestContext.getStore();
+    const requestId = requestContext.getRequestId() ?? 'unknown';
+    const userId = requestContext.getUser()?.userId ?? 'anonymous';
 
     res.on('finish', async () => {
       try {
         await repository.insert({
           method: req.method,
           path: req.path,
-          requestId: store?.requestId ?? 'unknown',
+          requestId,
           status: String(res.statusCode),
-          userId: store?.user?.userId ?? 'anonymous',
+          userId,
         });
       } catch (err) {
         console.error('Audit log failed:', err);

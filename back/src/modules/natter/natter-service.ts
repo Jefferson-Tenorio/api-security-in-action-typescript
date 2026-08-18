@@ -1,62 +1,73 @@
+import type { TokenPayload } from '../auth/jwt-service.js';
+import type { NatterRepository } from './natter-repository.js';
 import type { Message, MessageView, Space, SpaceView } from './natter-types.js';
+import type { ListQuery } from './natter-validation.js';
 
-import { requestContext } from '../../shared/context/request-context.js';
 import { HttpError } from '../../shared/error/http-error.js';
-import { NatterRepository } from './natter-repository.js';
+
+export type CurrentUser = () => TokenPayload;
 
 export class NatterService {
-  constructor(private readonly natterRepo: NatterRepository) {}
+  constructor(
+    private readonly natterRepo: NatterRepository,
+    private readonly getCurrentUser: CurrentUser,
+  ) {}
 
   async createMessage(data: Message): Promise<MessageView> {
-    return this.natterRepo.createMessage(data, this.getUsername());
+    return this.natterRepo.createMessage(data, this.getCurrentUser().username);
   }
 
   async createSpace(data: Space): Promise<SpaceView> {
-    return this.natterRepo.createSpace(data, this.getUsername());
+    return this.natterRepo.createSpace(data, this.getCurrentUser().username);
   }
 
-  async deleteMessage(id: string): Promise<void> {
-    await this.natterRepo.deleteMessage(id, this.getUsername());
+  async deleteMessage(id: number): Promise<void> {
+    await this.natterRepo.deleteMessage(id, this.getCurrentUser().username);
   }
 
-  async deleteSpace(id: string): Promise<void> {
-    await this.natterRepo.deleteSpace(id, this.getUsername());
+  async deleteSpace(id: number): Promise<void> {
+    await this.natterRepo.deleteSpace(id, this.getCurrentUser().username);
   }
 
-  async findAllMessages(): Promise<MessageView[]> {
-    const result = await this.natterRepo.findAllMessages();
+  async findAllMessages(listQuery: ListQuery): Promise<MessageView[]> {
+    const result = await this.natterRepo.findAllMessages(
+      this.getCurrentUser().username,
+      listQuery.limit,
+      listQuery.offset,
+    );
     if (!result) throw HttpError.notFound('Messages not found');
     return result;
   }
 
-  async findAllSpaces(): Promise<SpaceView[]> {
-    const result = await this.natterRepo.findAllSpaces();
+  async findAllSpaces(listQuery: ListQuery): Promise<SpaceView[]> {
+    const result = await this.natterRepo.findAllSpaces(
+      this.getCurrentUser().username,
+      listQuery.limit,
+      listQuery.offset,
+    );
     if (!result) throw HttpError.notFound('Spaces not found');
     return result;
   }
 
-  async findByIdMessage(id: string): Promise<MessageView> {
-    if (!id) throw HttpError.badRequest('Id cannot be empty');
-    const result = await this.natterRepo.findByIdMessage(id);
+  async findByIdMessage(id: number): Promise<MessageView> {
+    const result = await this.natterRepo.findByIdMessage(
+      id,
+      this.getCurrentUser().username,
+    );
     if (!result) throw HttpError.notFound('Message not found');
     return result;
   }
 
-  async findByIdSpace(id: string): Promise<SpaceView> {
-    if (!id) throw HttpError.badRequest('Id cannot be empty');
-    const result = await this.natterRepo.findByIdSpace(id);
+  async findByIdSpace(id: number): Promise<SpaceView> {
+    const result = await this.natterRepo.findByIdSpace(
+      id,
+      this.getCurrentUser().username,
+    );
     if (!result) throw HttpError.notFound('Space not found');
     return result;
   }
 
-  async updateMessage(id: string, content: string): Promise<MessageView> {
-    if (!content) throw HttpError.badRequest('Content cannot be empty');
-    return this.natterRepo.updateMessage(id, content, this.getUsername());
-  }
-
-  private getUsername(): string {
-    const user = requestContext.getStore()?.user;
-    if (!user) throw HttpError.unauthorized('Not authenticated');
-    return user.username;
+  async updateMessage(id: number, content: string): Promise<MessageView> {
+    return this.natterRepo.updateMessage(id, content, this.getCurrentUser().username);
   }
 }

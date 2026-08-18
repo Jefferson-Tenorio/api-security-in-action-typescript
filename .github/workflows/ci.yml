@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main, developer]
+  pull_request:
+
+jobs:
+  back:
+    name: Backend (lint, type-check, build, tests, audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: back
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: board
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U admin -d board"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://admin:admin@localhost:5432/board
+      DATABASE_URL_ADMIN: postgres://admin:admin@localhost:5432/board
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: back/.nvmrc
+          cache: pnpm
+          cache-dependency-path: back/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate RSA keys
+        run: |
+          mkdir -p certs
+          openssl genrsa -out certs/private.pem 2048
+          openssl rsa -in certs/private.pem -pubout -out certs/public.pem
+
+      - name: Run migrations
+        run: pnpm migrate:up
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build
+        run: pnpm build
+
+      - name: Tests
+        run: pnpm test:run
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level high
