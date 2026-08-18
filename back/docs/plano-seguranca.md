@@ -94,30 +94,30 @@ security/
 └── information-disclosure.test.ts (erros não vazam stack; redação em logs; senha nunca nas respostas)
 ```
 
-- [ ] Testes de enumeração de usuários (register 409 vs login 401 — sem vazamento indevido).
-- [ ] Testes de exposição de informação (respostas de erro 400/401/404/409/429/500 com formato consistente).
+- [x] Testes de enumeração de usuários (register 409 vs login 401 — sem vazamento indevido).
+- [x] Testes de exposição de informação (respostas de erro 400/401/404/409/429/500 com formato consistente).
 
 ### P3.15 — Eventos de auditoria semânticos
 
-- [ ] Separar request logging de security events.
-- [ ] Criar evento explícito por ação: `AUTH_LOGIN_SUCCESS`, `AUTH_LOGIN_FAILURE`, `AUTH_LOGOUT`, `AUTHZ_DENIED`, `RESOURCE_CREATED`, `RESOURCE_UPDATED`, `RESOURCE_DELETED`.
-- [ ] Campos: `actor` (userId), `action`, `resource`, `outcome`, `requestId`, `timestamp`.
-- [ ] Nunca registrar senha/token (redação já existe no `http-logger`; aplicar também no novo logger de eventos).
-- [ ] Definir retenção dos audit logs (política + limpeza).
+- [x] Separar request logging de security events.
+- [x] Criar evento explícito por ação: `AUTH_LOGIN_SUCCESS`, `AUTH_LOGIN_FAILURE`, `AUTH_LOGOUT`, `AUTHZ_DENIED`, `RESOURCE_CREATED`, `RESOURCE_UPDATED`, `RESOURCE_DELETED`.
+- [x] Campos: `actor` (userId), `action`, `resource`, `outcome`, `requestId`, `timestamp`.
+- [x] Nunca registrar senha/token (redação já existe no `http-logger`; aplicar também no novo logger de eventos).
+- [x] Definir retenção dos audit logs (política + limpeza).
 
 ### P3.16 — Logging estruturado (JSON)
 
-- [ ] Migrar `http-logger.ts` para saída JSON (uma linha por evento).
-- [ ] Níveis: `debug`, `info`, `warn`, `error` (via env `LOG_LEVEL`).
-- [ ] Campos comuns: `requestId`, `userId` (quando disponível), `status`, `durationMs`, `method`, `path`.
-- [ ] Manter redaction centralizado (`sanitize`).
-- [ ] `global-error-handler` loga como `error` estruturado.
+- [x] Migrar `http-logger.ts` para saída JSON (uma linha por evento).
+- [x] Níveis: `debug`, `info`, `warn`, `error` (via env `LOG_LEVEL`).
+- [x] Campos comuns: `requestId`, `userId` (quando disponível), `status`, `durationMs`, `method`, `path`.
+- [x] Manter redaction centralizado (`sanitize`).
+- [x] `global-error-handler` loga como `error` estruturado.
 
 ### P3.17 — CI/CD e scanners
 
-- [ ] CI atual já cobre lint/type-check/build/test/`pnpm audit`. Adicionar:
-- [ ] Scanner de container (ex.: Trivy) na imagem do Dockerfile.
-- [ ] Scanner de dependências em profundidade (ex.: `pnpm audit` já; avaliar `osv-scanner`).
+- [x] CI atual já cobre lint/type-check/build/test/`pnpm audit`. Adicionar:
+- [x] Scanner de container (ex.: Trivy) na imagem do Dockerfile.
+- [x] Scanner de dependências em profundidade (ex.: `pnpm audit` já; avaliar `osv-scanner`).
 - [ ] Bloquear merge quando checks críticos falharem (branch protection em `developer`/`main`).
 
 ---

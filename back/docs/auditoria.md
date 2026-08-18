@@ -231,11 +231,11 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 
 ## 13. Classificação final
 
-**IMPLEMENTADO (32):** auth JWT RS256 com algoritmo fixo · expiração · **claims iss/aud/jti validados (P2)** · **revogação por deny-list pós-logout (P2)** · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · **rate limit por identidade (userId/IP) e por username no login (P2)** · ownership em escrita e leitura (P0) · mass assignment coberto · SQLi protegido · **schema validation zod em auth e natter (P0/P1)** · **paginação com limites (P1)** · **payload 100kb explícito + 413 (P1)** · **timeouts (P1)** · erro centralizado/formato único (incl. erros do body-parser) · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · **container não-root sem secrets (P1)** · **dependências limpas, `pnpm audit` zero (P1)** · testes de contrato auth+authz · testes BOLA/input-validation/pagination/http-hardening/jwt/revocation/rate-limit · CI/CD com audit de dependências.
+**IMPLEMENTADO (36):** auth JWT RS256 com algoritmo fixo · expiração · **claims iss/aud/jti validados (P2)** · **revogação por deny-list pós-logout (P2)** · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · **rate limit por identidade (userId/IP) e por username no login (P2)** · ownership em escrita e leitura (P0) · mass assignment coberto · SQLi protegido · **schema validation zod em auth e natter (P0/P1)** · **paginação com limites (P1)** · **payload 100kb explícito + 413 (P1)** · **timeouts (P1)** · erro centralizado/formato único (incl. erros do body-parser) · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · **container não-root sem secrets (P1)** · **dependências limpas, `pnpm audit` zero (P1)** · testes de contrato auth+authz · testes BOLA/input-validation/pagination/http-hardening/jwt/revocation/rate-limit · CI/CD com audit de dependências · **eventos de auditoria semânticos (P3)** · **logging JSON estruturado com níveis (P3)** · **suíte de segurança (auth/authz/disclosure) (P3)** · **scanners no CI, trivy/osv-scanner informativos (P3)**.
 
-**PARCIAL (4):** logs não-JSON · audit sem eventos semânticos · confidencialidade XSS (nada renderiza hoje) · brute force sem lockout progressivo.
+**PARCIAL (4):** confidencialidade XSS (nada renderiza hoje) · brute force sem lockout progressivo · branch protection no GitHub (bloqueio de merge) · políticas de senha/registro.
 
-**AUSENTE (9):** refresh token · RBAC/scopes · métricas · alertas · scanners no CI (trivy/osv-scanner) · branch protection · versionamento `/v1` · política de senha/validação de registro · eventos de auditoria semânticos (P3).
+**AUSENTE (5):** refresh token · RBAC/scopes · métricas · alertas · versionamento `/v1`.
 
 **N/A (6):** NoSQLi · command injection · SSRF · path traversal · deserialization · BFLA/admin.
 
@@ -282,7 +282,9 @@ Nenhum para o estágio atual (estudo local, sem dados reais).
 - ~~Revogação: deny-list de jti~~ — feito (P2): tabela `token_denylist`, logout insere jti, authenticate rejeita (testes `security/revocation.test.ts`).
 - ~~Rate limit por usuário (não só IP)~~ — feito (P2): chave por `userId`/IP + limite de login por username (testes `security/rate-limit.test.ts`). Lockout progressivo: não implementado (opcional no plano).
 - ~~CI com lint → type-check → build → test → `pnpm audit`~~ — feito (P0).
-- Logs JSON estruturados com nível/severidade (Fase P3).
+- ~~Logs JSON estruturados com nível/severidade~~ — feito (P3): `http-logger` em JSON, `LOG_LEVEL`, redação, `global-error-handler` estruturado (`security/logging.test.ts`).
+- ~~Eventos de auditoria semânticos~~ — feito (P3): tabela `security_events`, eventos `AUTH_*`/`AUTHZ_DENIED`/`RESOURCE_*` via `SecurityEventLogger` (`security/audit-events.test.ts`).
+- ~~Scanners no CI~~ — feito (P3): Trivy (imagem) + osv-scanner; informativos (não bloqueiam) por decisão do projeto acadêmico.
 
 ### Recomendações estruturais
 
