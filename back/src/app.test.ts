@@ -172,6 +172,11 @@ describe('Natter contract', () => {
 
 afterAll(async () => {
   await dbAdmin`DELETE FROM messages WHERE author LIKE 'test_%'`;
-  await dbAdmin`DELETE FROM spaces WHERE owner LIKE 'test_%'`;
+  await dbAdmin`
+    DELETE FROM spaces WHERE id IN (
+      SELECT sm.space_id FROM space_members sm JOIN users u ON u.id = sm.user_id
+      WHERE u.username LIKE 'test_%'
+    )
+  `;
   await dbUser`DELETE FROM users WHERE username LIKE 'test_%'`;
 });

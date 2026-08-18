@@ -8,9 +8,18 @@ import {
   parseListQuery,
   parseMessage,
   parseSpace,
+  parseUsername,
 } from './natter-validation.js';
 
 export class NatterController {
+  addMember = asyncHandler(async (req: Request, res: Response) => {
+    const member = await this.service.addMember(
+      parseId(req.params.id),
+      parseUsername(req.body).username,
+    );
+    res.status(200).json(member);
+  });
+
   createMessage = asyncHandler(async (req: Request, res: Response) => {
     const message = await this.service.createMessage(parseMessage(req.body));
     res.status(200).json(message);
@@ -51,6 +60,18 @@ export class NatterController {
   findByIdSpace = asyncHandler(async (req: Request, res: Response) => {
     const space = await this.service.findByIdSpace(parseId(req.params.id));
     res.status(200).json(space);
+  });
+
+  listMembers = asyncHandler(async (req: Request, res: Response) => {
+    const members = await this.service.listMembers(parseId(req.params.id));
+    res.status(200).json(members);
+  });
+
+  removeMember = asyncHandler(async (req: Request, res: Response) => {
+    const username = req.params.username;
+    if (typeof username !== 'string') throw new Error('Missing username');
+    await this.service.removeMember(parseId(req.params.id), username);
+    res.status(204).end();
   });
 
   updateMessage = asyncHandler(async (req: Request, res: Response) => {

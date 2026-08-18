@@ -103,6 +103,6 @@ describe('Pagination — resource limits', () => {
 
 afterAll(async () => {
   await dbAdmin`DELETE FROM messages WHERE author LIKE 'page_%'`;
-  await dbAdmin`DELETE FROM spaces WHERE owner LIKE 'page_%'`;
+  await dbAdmin`DELETE FROM spaces WHERE id IN (SELECT sm.space_id FROM space_members sm JOIN users u ON u.id = sm.user_id WHERE u.username LIKE 'page_%')`;
   await dbUser`DELETE FROM users WHERE username LIKE 'page_%'`;
 });

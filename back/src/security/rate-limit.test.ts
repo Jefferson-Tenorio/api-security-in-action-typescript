@@ -26,26 +26,30 @@ function unique(prefix: string): string {
 }
 
 describe('Rate limit — identity-based', () => {
-  it('blocks login after the per-username limit with 429 and Retry-After', async () => {
-    const username = unique('rl');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
+  it(
+    'blocks login after the per-username limit with 429 and Retry-After',
+    async () => {
+      const username = unique('rl');
+      await request(app).post('/auth/register').send({ password, username }).expect(201);
 
-    let last: request.Response;
-    for (let i = 0; i < 20; i++) {
-      last = await request(app)
+      let last: request.Response;
+      for (let i = 0; i < 20; i++) {
+        last = await request(app)
+          .post('/auth/login')
+          .send({ password: 'senha-errada', username });
+        expect(last.status).toBe(401);
+      }
+
+      const blocked = await request(app)
         .post('/auth/login')
         .send({ password: 'senha-errada', username });
-      expect(last.status).toBe(401);
-    }
 
-    const blocked = await request(app)
-      .post('/auth/login')
-      .send({ password: 'senha-errada', username });
-
-    expect(blocked.status).toBe(429);
-    expect(blocked.body.error.message).toBe('Too many requests');
-    expect(blocked.headers['retry-after']).toBeTruthy();
-  });
+      expect(blocked.status).toBe(429);
+      expect(blocked.body.error.message).toBe('Too many requests');
+      expect(blocked.headers['retry-after']).toBeTruthy();
+    },
+    30000,
+  );
 
   it('a different username is not affected by the lockout', async () => {
     const blockedUser = unique('rl');

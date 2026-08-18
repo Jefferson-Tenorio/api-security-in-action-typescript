@@ -119,6 +119,6 @@ describe('Authorization — cross-user ownership matrix', () => {
 
 afterAll(async () => {
   await dbAdmin`DELETE FROM messages WHERE author LIKE 'authz_%'`;
-  await dbAdmin`DELETE FROM spaces WHERE owner LIKE 'authz_%'`;
+  await dbAdmin`DELETE FROM spaces WHERE id IN (SELECT sm.space_id FROM space_members sm JOIN users u ON u.id = sm.user_id WHERE u.username LIKE 'authz_%')`;
   await dbUser`DELETE FROM users WHERE username LIKE 'authz_%'`;
 });
