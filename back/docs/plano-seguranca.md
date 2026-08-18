@@ -4,15 +4,15 @@ Documento de continuidade do plano de hardening. Objetivo: permitir retomar o tr
 
 ## Estado atual (2026-08-18)
 
-- Branch: `security/hardening` (12 commits, todos pushados).
-- Fase 0 + P0 + P1 concluídas. 31 testes verdes, lint/type-check/build OK, `pnpm audit` = 0 vulnerabilidades.
-- Suíte de segurança em `back/src/security/`: `bola.test.ts`, `input-validation.test.ts`, `pagination.test.ts`, `http-hardening.test.ts`.
+- Branch: `security/hardening` (16 commits, todos pushados).
+- Fase 0 + P0 + P1 + **P2 concluídas**. 44 testes verdes, lint/type-check/build OK, `pnpm audit` = 0 vulnerabilidades.
+- Suíte de segurança em `back/src/security/`: `bola.test.ts`, `input-validation.test.ts`, `pagination.test.ts`, `http-hardening.test.ts`, `jwt.test.ts`, `revocation.test.ts`, `rate-limit.test.ts`.
 - CI: `.github/workflows/ci.yml` (lint → type-check → build → test → `pnpm audit`, Postgres service container, chaves RSA geradas via openssl).
 - Docker: imagem multi-stage, non-root, sem secrets (`.dockerignore` exclui `certs/` e `.env`).
 - PR para `developer` **pendente de abrir** (gh CLI não instalado na máquina original; abrir via
   https://github.com/Jefferson-Tenorio/api-security-in-action-typescript/pull/new/security/hardening ).
 - Issues do GitHub a partir da auditoria: **não criadas** (mesmo motivo).
-- Docs drift pendente: `fluxos.md` descreve front que não corresponde ao código; README aponta chaves em `back/private.pem` mas estão em `back/certs/`.
+- Docs drift (`fluxos.md` + README certs path): **CORRIGIDO (P2)**.
 
 ### Como retomar em outra máquina
 
@@ -43,41 +43,34 @@ AUDIT → REPRODUCE → FIX → TEST → VERIFY → DOCUMENT
 
 ### P2.11 — Claims do JWT (`iss`, `aud`, `jti`)
 
-- [ ] `env.ts`: adicionar `jwt.issuer` (`JWT_ISSUER`, default `natter-api`) e `jwt.audience` (`JWT_AUDIENCE`, default `natter-web`).
-- [ ] `jwt-service.ts` (`sign`): payload passa a incluir `iss`, `aud`, `jti` (uuid) — além de `userId`/`username`.
-- [ ] `verify`: validar `issuer`, `audience` via opções do `jsonwebtoken`; retorno tipado inclui `jti`.
-- [ ] `authenticate-middleware.ts`: nada muda na interface (o `verify` já rejeita claims inválidos).
-- [ ] Documentar o contrato do token (claims, TTL) no README ou docs.
-- [ ] Testes (`security/jwt.test.ts`):
-  - [ ] token assinado com chave errada → 401.
-  - [ ] token adulterado (payload alterado) → 401.
-  - [ ] token expirado (`expiresIn` curto via env de teste) → 401.
-  - [ ] token com `iss` errado → 401.
-  - [ ] token com `aud` errado → 401.
+- [x] `env.ts`: `jwt.issuer` (`JWT_ISSUER`, default `natter-api`) e `jwt.audience` (`JWT_AUDIENCE`, default `natter-web`).
+- [x] `jwt-service.ts` (`sign`): payload inclui `iss`, `aud`, `jti` (uuid) — além de `userId`/`username`.
+- [x] `verify`: valida `issuer`/`audience` via opções do `jsonwebtoken`; retorno tipado inclui `jti` (`VerifiedToken`).
+- [x] `authenticate-middleware.ts`: interface inalterada (o `verify` já rejeita claims inválidos).
+- [x] Contrato do token (claims, TTL) documentado no README e em `fluxos.md` §4.
+- [x] Testes (`security/jwt.test.ts`): chave errada → 401 · adulterado → 401 · expirado → 401 · `iss` errado → 401 · `aud` errado → 401 · claims `iss`/`aud`/`jti` presentes no login real.
 
 ### P2.12 — Revogação: `jti` + deny-list
 
 Estratégia escolhida: deny-list em tabela (mais simples que refresh token rotation; adequado ao estudo).
 
-- [ ] Migração nova: tabela `token_denylist` (`jti` PK, `user_id`, `expires_at TIMESTAMPTZ`, criada com `created_at`).
-- [ ] Novo `TokenDenylistRepository` (módulo auth) com `add(jti, userId, expiresAt)` e `isDenied(jti)`.
-- [ ] `AuthModule` injeta o repository no `authenticate` (via `createAuthenticate(tokenService, denylist)`).
-- [ ] `authenticate`: após `verify`, consulta deny-list; se `jti` presente → 401 (`Invalid or expired token`).
-- [ ] `logout` (controller/service): extrai `jti` do cookie, insere na deny-list com TTL = `env.jwt.expiresInMs`, limpa cookie.
-- [ ] Limpeza periódica: opcional — `DELETE WHERE expires_at < NOW()` no boot ou lazy check no `isDenied` (query com `expires_at > now()`).
-- [ ] Testes (`security/revocation.test.ts`):
-  - [ ] após logout, o mesmo token → 401 (reuso bloqueado).
-  - [ ] token de outro usuário não é afetado pelo logout.
-  - [ ] registro de `jti` duplicado não quebra (idempotência).
+- [x] Migração `1787065297877_token-denylist.ts`: tabela `token_denylist` (`jti` PK, `user_id`, `expires_at TIMESTAMPTZ`, `created_at`, índice em `expires_at`).
+- [x] `TokenDenylistRepository` (`token-denylist-repository.ts`) com `add(jti, userId, expiresAt)` (idempotente, `ON CONFLICT DO NOTHING`) e `isDenied(jti)` (filtra `expires_at > now()` — expirados ignorados, sem job de limpeza).
+- [x] `AuthModule` injeta o repository no `authenticate` (via `createAuthenticate(tokenService, denylist)`).
+- [x] `authenticate`: após `verify`, consulta deny-list; `jti` presente → 401 (`Invalid or expired token`).
+- [x] `logout` (service): extrai `jti` do cookie, insere na deny-list com TTL = `exp` do token, limpa cookie; idempotente sem token.
+- [x] Limpeza: lazy via `expires_at > now()` no `isDenied` (sem job — decisão registrada).
+- [x] Testes (`security/revocation.test.ts`): reuso pós-logout → 401 · logout de A não afeta B · logout sem token 200 · logout duplo idempotente.
 
 ### P2.13 — Rate limit por identidade + brute force
 
-- [ ] Desacoplar bypass de teste: `rate-limit.ts` passa a usar `RATE_LIMIT_ENABLED` (env) em vez de `NODE_ENV === 'test'`, para permitir testes reais de 429.
-- [ ] `keyGenerator` por identidade: `userId` de `requestContext.getUser()` quando autenticado; IP quando anônimo.
-- [ ] Limite específico de login: por username além de IP (key `login:{username}`), via `keyGenerator` customizado no `AuthRouter`.
-- [ ] Lockout progressivo (opcional): penalidade crescente após N falhas por username.
-- [ ] Documentar limites (valores e janelas) no README.
-- [ ] Testes (`security/rate-limit.test.ts`): ultrapassar limite → 429 com `Retry-After`; endpoints não sensíveis não afetados.
+- [x] Bypass de teste desacoplado: `RATE_LIMIT_ENABLED` (env) no lugar de `NODE_ENV === 'test'`; default **off** (suíte existente intacta); `rate-limit.test.ts` ativa a flag antes do import dinâmico do `App`.
+- [x] `keyGenerator` por identidade: `userId` de `requestContext.getUser()` quando autenticado; IP quando anônimo.
+- [x] Limite específico de login: chave `login:{username}:{ip}` (`loginLimiter`, 20/15min) no `AuthRouter`.
+- [x] Handler customizado: 429 no formato `{error:{message}}` + header `Retry-After`.
+- [x] Limites documentados no README (valores e janelas).
+- [x] Testes (`security/rate-limit.test.ts`): login além do limite → 429 + `Retry-After` · username diferente não afetado · escrita autenticada chaveada por `userId` (A bloqueado, B mesmo IP ok).
+- [ ] Lockout progressivo (opcional): **não implementado** — decisão: o limite fixo por username já mitiga brute force no estudo; fica como melhoria futura.
 
 ---
 
@@ -145,7 +138,7 @@ security/
 
 ## Pendências de documentação/limpeza (qualquer fase)
 
-- [ ] Corrigir `fluxos.md` (front atual: `App.tsx` tem `/home`; front lê `data.error?.message`).
-- [ ] Corrigir README (caminho das chaves: `back/certs/`).
+- [x] Corrigir `fluxos.md` (front atual: `App.tsx` tem `/home`; front lê `data.error?.message`) — **feito (P2)**.
+- [x] Corrigir README (caminho das chaves: `back/certs/`; contrato JWT e rate limiting) — **feito (P2)**.
 - [ ] Criar issues no GitHub a partir da auditoria (instalar `gh`).
 - [ ] Abrir PR `security/hardening` → `developer`.

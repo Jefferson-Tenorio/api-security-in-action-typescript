@@ -1,7 +1,7 @@
 # Auditoria de Features de API Security
 
 Projeto: Natter — API Security in Action (TypeScript)
-Data: 2026-08-18 (atualizada em 2026-08-18 — correções P0 aplicadas na branch `security/hardening`)
+Data: 2026-08-18 (atualizada em 2026-08-18 — correções P0/P1 e Fase P2 aplicadas na branch `security/hardening`)
 
 Regra aplicada: nenhuma feature foi marcada como implementada apenas por existir biblioteca, dependência ou nome sugestivo no projeto. Toda marcação tem evidência concreta (arquivo:linha, comportamento observado).
 
@@ -21,7 +21,7 @@ Regra aplicada: nenhuma feature foi marcada como implementada apenas por existir
 | Serviços externos | Nenhum |
 | Deploy | `Dockerfile` (node:22-alpine, `USER node`), `docker-compose.yml` (só Postgres). Sem CI/CD |
 | Config/env | `back/src/config/env.ts` (lê `.env`), `.env.example` versionado; `.env` e `*.pem` no `.gitignore` (confirmado: `git ls-files` só mostra `.env.example`) |
-| Testes | `back/src/app.test.ts` — 9 testes de contrato (vitest + supertest), 100% verdes |
+| Testes | `back/src/app.test.ts` (contrato) + `back/src/security/` (BOLA, input-validation, pagination, http-hardening, jwt, revocation, rate-limit) — 44 testes, 100% verdes |
 | Documentação | `README.md`, `back/docs/fluxos.md` (parcialmente desatualizado: `fluxos.md:63` diz que `/home` não existe no App, mas `App.tsx:10` tem; e alega `Login.tsx` lê `data.message`, mas o código usa `data.error?.message`) |
 
 ---
@@ -35,13 +35,13 @@ Regra aplicada: nenhuma feature foi marcada como implementada apenas por existir
 | JWT | IMPLEMENTADO | `jwt-service.ts:17-28` |
 | Access/refresh separados | AUSENTE | só um token (15min) |
 | Expiração de tokens | IMPLEMENTADO | `expiresInMs` 15min (`env.ts`, `jwt-service.ts`) |
-| Revogação/invalidação | AUSENTE | `logout` só limpa o cookie; sem blacklist/deny-list — JWT continua válido até expirar |
+| Revogação/invalidação | IMPLEMENTADO (P2) | deny-list `token_denylist` (jti PK, user_id, expires_at); `logout` insere jti + limpa cookie (`auth-service.ts:20-29`, `token-denylist-repository.ts`); `authenticate` consulta a deny-list após `verify` (`authenticate-middleware.ts:14-19`) |
 | Validação de assinatura | IMPLEMENTADO | `verifyToken` com chave pública (`jwt-service.ts:26-28`) |
 | Algoritmo explicitamente validado | IMPLEMENTADO | `algorithms: ['RS256']` (`jwt-service.ts:28`) |
-| Claims validados | PARCIAL | só assinatura; sem `iss`/`aud`/`jti` |
-| Proteção contra reuso de tokens | AUSENTE | sem `jti`/registro de uso |
+| Claims validados | IMPLEMENTADO (P2) | `iss`/`aud`/`jti` no sign + validação de issuer/audience no verify (`jwt-service.ts:20-38`, `env.ts` com `JWT_ISSUER`/`JWT_AUDIENCE`); testes em `security/jwt.test.ts` |
+| Proteção contra reuso de tokens | IMPLEMENTADO (P2) | `jti` único por login + deny-list; token reusado após logout → 401 (`security/revocation.test.ts`) |
 | Credenciais seguras em repouso | IMPLEMENTADO | `bcrypt.hash(password, 10)` (`auth-service.ts:27`) |
-| Proteção brute force | PARCIAL | rate-limit IP-only (`writeLimiter`, 20/15min, `rate-limit.ts`), sem lockout por conta, sem atraso adaptativo |
+| Proteção brute force | PARCIAL | rate-limit por identidade (`userId` autenticado / IP anônimo) + limite de login por `username`+IP (`rate-limit.ts`, `auth-router.ts`); sem lockout progressivo (opcional, não implementado) |
 | Política p/ endpoints sensíveis | IMPLEMENTADO | `/natter` todo exige cookie (`natter-router.ts:10`); login/register limitados |
 
 Gaps: sem refresh token, sem revogação, sem lockout por conta; `register`/`login` sem validação de entrada (username/password vazios → erro de banco 500 em vez de 400, já que `users.username` é `VARCHAR(50)`).
@@ -116,8 +116,8 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 | Métodos HTTP controlados | IMPLEMENTADO | routers só registram métodos usados |
 | Limite de payload | IMPLEMENTADO | `express.json({ limit: '100kb' })` explícito + 413/400 (testes em `http-hardening.test.ts`) |
 | Request abuse | PARCIAL | só rate-limit |
-| Rate limiting | IMPLEMENTADO | 100 leitura/20 escrita por 15min (`rate-limit.ts:21-22`) |
-| Limites p/ endpoints sensíveis | IMPLEMENTADO | `writeLimiter` em login/register (`auth-router.ts:8-9`) |
+| Rate limiting | IMPLEMENTADO (P2) | 100 leitura/20 escrita por 15min com chave por `userId` ou IP; login 20 por `username`+IP; flag `RATE_LIMIT_ENABLED` (default off) (`rate-limit.ts`, `auth-router.ts`) |
+| Limites p/ endpoints sensíveis | IMPLEMENTADO | `writeLimiter` em register + `loginLimiter` em login (`auth-router.ts:9-11`) |
 | Timeout de requests | IMPLEMENTADO | `requestTimeout`/`timeout` 30s + `headersTimeout` 60s (`index.ts`, `REQUEST_TIMEOUT_MS`) |
 | Requisições gigantes | IMPLEMENTADO | limite explícito 100kb (413) |
 
@@ -202,8 +202,10 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 | Acesso indevido a recursos | IMPLEMENTADO | `bola.test.ts` — listagem e acesso por id (404) |
 | Validação de entrada | IMPLEMENTADO (auth) | `input-validation.test.ts` — 9 cenários negativos (400) |
 | Endpoints admin | N/A | |
-| Rate limiting | AUSENTE | limiter é bypass em teste (`rate-limit.ts:5-9`) |
-| Cenários negativos | PARCIAL | 401/404/409 cobertos |
+| Rate limiting | IMPLEMENTADO (P2) | `rate-limit.test.ts` — 429 com `Retry-After` (flag `RATE_LIMIT_ENABLED` ativada no arquivo via import dinâmico); chave por `userId` (B não afetado pelo bloqueio de A) e por `username` no login |
+| JWT (chave errada/adulterado/expirado/iss/aud) | IMPLEMENTADO (P2) | `jwt.test.ts` — 6 cenários via HTTP (401) |
+| Revogação pós-logout | IMPLEMENTADO (P2) | `revocation.test.ts` — reuso bloqueado (401), logout de A não afeta B, idempotência |
+| Cenários negativos | IMPLEMENTADO | 400/401/404/409/429 cobertos |
 | Integração de segurança | IMPLEMENTADO | supertest sobre `App` real com banco |
 | Teste contra vulns conhecidas | AUSENTE | sem OWASP ZAP/trivy etc. |
 | Segurança no CI/CD | IMPLEMENTADO | `.github/workflows/ci.yml` — lint → type-check → build → test → `pnpm audit` com Postgres service container |
@@ -229,11 +231,11 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 
 ## 13. Classificação final
 
-**IMPLEMENTADO (27):** auth JWT RS256 com algoritmo fixo · expiração · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · rate limit · ownership em escrita e leitura (P0) · mass assignment coberto · SQLi protegido · **schema validation zod em auth e natter (P0/P1)** · **paginação com limites (P1)** · **payload 100kb explícito + 413 (P1)** · **timeouts (P1)** · erro centralizado/formato único (incl. erros do body-parser) · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · **container não-root sem secrets (P1)** · **dependências limpas, `pnpm audit` zero (P1)** · testes de contrato auth+authz · testes BOLA/input-validation/pagination/http-hardening · CI/CD com audit de dependências.
+**IMPLEMENTADO (32):** auth JWT RS256 com algoritmo fixo · expiração · **claims iss/aud/jti validados (P2)** · **revogação por deny-list pós-logout (P2)** · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · **rate limit por identidade (userId/IP) e por username no login (P2)** · ownership em escrita e leitura (P0) · mass assignment coberto · SQLi protegido · **schema validation zod em auth e natter (P0/P1)** · **paginação com limites (P1)** · **payload 100kb explícito + 413 (P1)** · **timeouts (P1)** · erro centralizado/formato único (incl. erros do body-parser) · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · **container não-root sem secrets (P1)** · **dependências limpas, `pnpm audit` zero (P1)** · testes de contrato auth+authz · testes BOLA/input-validation/pagination/http-hardening/jwt/revocation/rate-limit · CI/CD com audit de dependências.
 
-**PARCIAL (5):** claims JWT · logs não-JSON · audit sem eventos semânticos · confidencialidade XSS (nada renderiza hoje) · rate limit por IP (sem identidade).
+**PARCIAL (4):** logs não-JSON · audit sem eventos semânticos · confidencialidade XSS (nada renderiza hoje) · brute force sem lockout progressivo.
 
-**AUSENTE (12):** refresh token · revogação · RBAC/scopes · timeout · paginação · métricas · alertas · CI/CD · audit de dependências · testes de validação/rate-limit · versionamento · política de senha/validação de registro.
+**AUSENTE (9):** refresh token · RBAC/scopes · métricas · alertas · scanners no CI (trivy/osv-scanner) · branch protection · versionamento `/v1` · política de senha/validação de registro · eventos de auditoria semânticos (P3).
 
 **N/A (6):** NoSQLi · command injection · SSRF · path traversal · deserialization · BFLA/admin.
 
@@ -246,14 +248,14 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 ### Vulnerabilidades encontradas
 
 1. **[MÉDIO] BOLA/IDOR de leitura** — **CORRIGIDO (P0)**: reads filtrados por owner/author; recurso alheio → 404; regressão em `src/security/bola.test.ts`.
-2. **[BAIXO] Sem revogação de token** — logout é cosmético; JWT sobrevive 15min. Pendente (Fase P2: `jti` + deny-list).
-3. **[BAIXO] Sem paginação + rate limit por IP** — consumo de recurso sem fronteiras; limitador contornável por rotação de IP. Pendente (Fase P1/P2).
+2. **[BAIXO] Sem revogação de token** — **CORRIGIDO (P2)**: `jti` por login + deny-list `token_denylist`; logout revoga; reuso pós-logout → 401 (`security/revocation.test.ts`).
+3. **[BAIXO] Sem paginação + rate limit por IP** — **CORRIGIDO**: paginação (P1) + rate limit por identidade com limite de login por username (P2). Resta lockout progressivo (opcional).
 
 ### Misconfigurations encontradas
 
 - Senhas de roles do banco versionadas na migração — **CORRIGIDO (P0)**: migração `1787063356263_drop-app-roles` remove as roles (up/down verificados).
 - Dockerfile com `npm install`/dev CMD/sem `.dockerignore` — **CORRIGIDO (P1)**: multi-stage, lockfile, prod-only, non-root, secrets fora da imagem.
-- Docs drift: `fluxos.md` descreve front que não corresponde ao código atual; README aponta caminho de chaves errado (`back/private.pem` vs `back/certs/`). Pendente.
+- Docs drift: `fluxos.md` descreve front que não corresponde ao código atual; README aponta caminho de chaves errado (`back/private.pem` vs `back/certs/`). **CORRIGIDO (P2)**: `fluxos.md` e README atualizados (rotas do App.tsx, `data.error?.message`, `certs/`, contrato JWT, rate limiting).
 - ~~`pg`/`@types/pg` instalados e não usados~~ — **CORRIGIDO (P1)**: removidos; `pnpm audit` = 0 vulnerabilidades.
 
 ### Débitos de segurança
@@ -277,8 +279,8 @@ Nenhum para o estágio atual (estudo local, sem dados reais).
 ### Recomendações de médio prazo
 
 - ~~Paginação (limit/offset) com limites e validação~~ — feito (P1).
-- Revogação: lista de deny (jti/blacklist) ou refresh token com rotação (Fase P2).
-- Rate limit por usuário (não só IP) + lockout por conta em login (Fase P2).
+- ~~Revogação: deny-list de jti~~ — feito (P2): tabela `token_denylist`, logout insere jti, authenticate rejeita (testes `security/revocation.test.ts`).
+- ~~Rate limit por usuário (não só IP)~~ — feito (P2): chave por `userId`/IP + limite de login por username (testes `security/rate-limit.test.ts`). Lockout progressivo: não implementado (opcional no plano).
 - ~~CI com lint → type-check → build → test → `pnpm audit`~~ — feito (P0).
 - Logs JSON estruturados com nível/severidade (Fase P3).
 
