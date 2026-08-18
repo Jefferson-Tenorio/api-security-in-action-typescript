@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 import { HttpError } from '../../shared/error/http-error.js';
 import { asyncHandler } from '../../shared/utils/async-handler.js';
 import { NatterService } from './natter-service.js';
-import { isMessage, isSpace } from './natter-validation.js';
+import { isContent, isMessage, isSpace, parseId } from './natter-validation.js';
 
 export class NatterController {
   createMessage = asyncHandler(async (req: Request, res: Response) => {
@@ -19,12 +19,12 @@ export class NatterController {
   });
 
   deleteMessage = asyncHandler(async (req: Request, res: Response) => {
-    await this.service.deleteMessage(req.params.id as string);
+    await this.service.deleteMessage(parseId(req.params.id));
     res.status(204).end();
   });
 
   deleteSpace = asyncHandler(async (req: Request, res: Response) => {
-    await this.service.deleteSpace(req.params.id as string);
+    await this.service.deleteSpace(parseId(req.params.id));
     res.status(204).end();
   });
 
@@ -39,19 +39,20 @@ export class NatterController {
   });
 
   findByIdMessage = asyncHandler(async (req: Request, res: Response) => {
-    const message = await this.service.findByIdMessage(req.params.id as string);
+    const message = await this.service.findByIdMessage(parseId(req.params.id));
     res.status(200).json(message);
   });
 
   findByIdSpace = asyncHandler(async (req: Request, res: Response) => {
-    const space = await this.service.findByIdSpace(req.params.id as string);
+    const space = await this.service.findByIdSpace(parseId(req.params.id));
     res.status(200).json(space);
   });
 
   updateMessage = asyncHandler(async (req: Request, res: Response) => {
+    if (!isContent(req.body.content)) throw HttpError.badRequest('Invalid payload');
     const message = await this.service.updateMessage(
-      req.params.id as string,
-      req.body.content as string,
+      parseId(req.params.id),
+      req.body.content,
     );
     res.status(200).json(message);
   });

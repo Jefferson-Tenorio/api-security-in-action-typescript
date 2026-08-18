@@ -1,11 +1,15 @@
 import bcrypt from 'bcrypt';
 
-import { HttpError } from '../error/http-error.js';
-import { signToken } from './jwt-service.js';
-import { UserRepository } from './user-repository.js';
+import type { TokenService } from './jwt-service.js';
+import type { UserRepository } from './user-repository.js';
+
+import { HttpError } from '../../shared/error/http-error.js';
 
 export class AuthService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly tokenService: TokenService,
+  ) {}
 
   async login(username: string, password: string) {
     const user = await this.userRepository.findByUsername(username);
@@ -14,8 +18,10 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw HttpError.unauthorized('Invalid credentials');
 
-    const token = signToken({ userId: user.id, username: user.username });
-    return token;
+    return this.tokenService.sign({
+      userId: user.id,
+      username: user.username,
+    });
   }
 
   async register(username: string, password: string) {
