@@ -68,3 +68,37 @@ jobs:
 
       - name: Dependency audit
         run: pnpm audit --audit-level high
+
+  vulnerability-scan:
+    # Informational: scans run on every push/PR but never block the pipeline.
+    # This project is academic and does not ship to production; findings are
+    # reviewed manually (Trivy may report false positives by package name).
+    name: Vulnerability scan (Trivy image + osv-scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: back
+          push: false
+          load: true
+          tags: natter-backend:ci
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: natter-backend:ci
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Run osv-scanner
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: |-
+            --recursive
+            back/pnpm-lock.yaml
