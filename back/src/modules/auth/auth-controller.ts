@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 
 import { env } from '../../config/env.js';
 import { asyncHandler } from '../../shared/utils/async-handler.js';
+import { parseCredentials } from './auth-schemas.js';
 import { AuthService } from './auth-service.js';
 
 const COOKIE_OPTIONS = {
@@ -12,7 +13,7 @@ const COOKIE_OPTIONS = {
 
 export class AuthController {
   login = asyncHandler(async (req: Request, res: Response) => {
-    const { password, username } = req.body;
+    const { password, username } = parseCredentials(req.body);
     const token = await this.service.login(username, password);
 
     res.cookie('token', token, {
@@ -29,7 +30,7 @@ export class AuthController {
   });
 
   register = asyncHandler(async (req: Request, res: Response) => {
-    const { password, username } = req.body;
+    const { password, username } = parseCredentials(req.body);
     await this.service.register(username, password);
     res.status(201).json({ message: 'User created' });
   });
