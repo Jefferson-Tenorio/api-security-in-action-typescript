@@ -10,12 +10,16 @@ import { NatterModule } from './modules/natter/natter-module.js';
 import { requestContextMiddleware } from './shared/context/request-context-middleware.js';
 import { globalErrorHandler } from './shared/error/global-error-handler.js';
 import { httpLogger } from './shared/http/http-logger.js';
+import { metricsMiddleware } from './shared/metrics/metrics-middleware.js';
+import { Metrics } from './shared/metrics/metrics.js';
 
 export class App {
   public readonly instance: Application;
+  public readonly metrics: Metrics;
 
   constructor() {
     this.instance = express();
+    this.metrics = new Metrics();
     this.setupMiddlewares();
     this.setupRoutes();
     this.setupErrorHandlers();
@@ -36,6 +40,7 @@ export class App {
     );
     this.instance.use(express.json({ limit: '100kb' }));
     this.instance.use(httpLogger);
+    this.instance.use(metricsMiddleware(this.metrics));
 
     //headers
     this.instance.use(helmet());
@@ -56,5 +61,8 @@ export class App {
     this.instance.use(audit.middleware);
     this.instance.use('/v1/auth', auth.router);
     this.instance.use('/v1/natter', natter.router);
+    this.instance.get('/v1/metrics', (_req, res) => {
+      res.json(this.metrics.snapshot());
+    });
   }
 }
