@@ -53,9 +53,9 @@ Gaps: sem refresh token, sem revogação, sem lockout por conta; `register`/`log
 | Item | Status | Evidência |
 |---|---|---|
 | Autorização além da autenticação | IMPLEMENTADO | ownership em SQL (`natter-repository.ts:31-44,79-88`; teste em `app.test.ts:147-170`) |
-| Roles/perfis | AUSENTE (só no banco) | roles `app_read_write`/`app_admin` existem só na migração (`migrations/1777260392910_create-users-table.ts:30-31`) |
-| Permissions/scopes | AUSENTE | |
-| RBAC | AUSENTE | |
+| Roles/perfis | IMPLEMENTADO (P4) | roles por espaço `owner`/`member` em `space_members` (migração `1787069944593_space-members.ts`) |
+| Permissions/scopes | IMPLEMENTADO (P4) | `space:read`, `space:manage`, `message:write/update/delete` (`src/shared/authz/authz.ts`) |
+| RBAC | IMPLEMENTADO (P4) | RBAC+ABAC híbrido; decisão em `docs/plano-seguranca.md` |
 | Controle por recurso | IMPLEMENTADO | escrita protegida; leitura protegida após fix (P0) |
 | Proteção BOLA/IDOR | CORRIGIDO (P0) | reads filtrados por `author`/`owner` (`natter-repository.ts:47-76`); recurso alheio → 404. Regressão: `src/security/bola.test.ts` |
 | Só acessa o que é seu | IMPLEMENTADO | writes e reads: sim (testes `bola.test.ts`) |
@@ -224,18 +224,18 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 | Ordenação validada | N/A | |
 | Endpoints internos expostos | AUSENTE | |
 | Endpoints admin separados | N/A | |
-| Versionamento | AUSENTE | sem `/v1` |
+| Versionamento | IMPLEMENTADO (P4) | rotas em `/v1/auth`, `/v1/natter` e `/v1/metrics` |
 | Docs sem secrets | IMPLEMENTADO | README/`fluxos.md` sem segredos |
 
 ---
 
 ## 13. Classificação final
 
-**IMPLEMENTADO (36):** auth JWT RS256 com algoritmo fixo · expiração · **claims iss/aud/jti validados (P2)** · **revogação por deny-list pós-logout (P2)** · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · **rate limit por identidade (userId/IP) e por username no login (P2)** · ownership em escrita e leitura (P0) · mass assignment coberto · SQLi protegido · **schema validation zod em auth e natter (P0/P1)** · **paginação com limites (P1)** · **payload 100kb explícito + 413 (P1)** · **timeouts (P1)** · erro centralizado/formato único (incl. erros do body-parser) · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · **container não-root sem secrets (P1)** · **dependências limpas, `pnpm audit` zero (P1)** · testes de contrato auth+authz · testes BOLA/input-validation/pagination/http-hardening/jwt/revocation/rate-limit · CI/CD com audit de dependências · **eventos de auditoria semânticos (P3)** · **logging JSON estruturado com níveis (P3)** · **suíte de segurança (auth/authz/disclosure) (P3)** · **scanners no CI, trivy/osv-scanner informativos (P3)**.
+**IMPLEMENTADO (41):** auth JWT RS256 com algoritmo fixo · expiração · **claims iss/aud/jti validados (P2)** · **revogação por deny-list pós-logout (P2)** · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · **rate limit por identidade (userId/IP) e por username no login (P2)** · ownership em escrita e leitura (P0) · **autorização arquitetural RBAC+ABAC com `space_members` e policy centralizada (P4)** · **membros de espaço (add/remove/list) (P4)** · mass assignment coberto · SQLi protegido · **schema validation zod em auth e natter (P0/P1)** · **paginação com limites (P1)** · **payload 100kb explícito + 413 (P1)** · **timeouts (P1)** · erro centralizado/formato único (incl. erros do body-parser) · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · **container não-root sem secrets (P1)** · **dependências limpas, `pnpm audit` zero (P1)** · testes de contrato auth+authz · testes BOLA/input-validation/pagination/http-hardening/jwt/revocation/rate-limit · **matriz de autorização (unit + integração) (P4)** · CI/CD com audit de dependências · **eventos de auditoria semânticos (P3)** · **logging JSON estruturado com níveis (P3)** · **suíte de segurança (auth/authz/disclosure) (P3)** · **scanners no CI, trivy/osv-scanner informativos (P3)** · **API versionada `/v1` (P4)** · **métricas por endpoint/status + alerta de anomalia (P4)**.
 
 **PARCIAL (4):** confidencialidade XSS (nada renderiza hoje) · brute force sem lockout progressivo · branch protection no GitHub (bloqueio de merge) · políticas de senha/registro.
 
-**AUSENTE (5):** refresh token · RBAC/scopes · métricas · alertas · versionamento `/v1`.
+**AUSENTE (2):** refresh token · alertas externos (métricas locais com log `metrics_anomaly` existem; integração com e-mail/Slack/etc. não).
 
 **N/A (6):** NoSQLi · command injection · SSRF · path traversal · deserialization · BFLA/admin.
 
@@ -289,5 +289,5 @@ Nenhum para o estágio atual (estudo local, sem dados reais).
 ### Recomendações estruturais
 
 - Introduzir validação de schema (ex.: zod) substituindo os guards manuais — cobre body, params e query com uma fonte.
-- Decidir a estratégia de autorização antes de crescer features: RBAC (roles na app) ou per-recurso (ABAC) — hoje só existe ownership de escrita, o que não escala para `spaces` compartilhados.
+- ~~Decidir a estratégia de autorização antes de crescer features~~ — **feito (P4)**: RBAC+ABAC híbrido, `space_members`, policy centralizada em `src/shared/authz/authz.ts` e matriz de autorização (`authz.test.ts` + `authz-matrix.test.ts`).
 - Extrair a política de segurança (CORS, cookie, headers, limites) para um módulo de configuração único e testável, hoje espalhada entre `app.ts` e `auth-controller.ts`.

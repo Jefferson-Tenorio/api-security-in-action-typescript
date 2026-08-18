@@ -88,6 +88,10 @@ sequenceDiagram
 | GET `/v1/natter/space?limit&offset` | cookie | idem message | **200** `[{id, name, owner}]` | 400 · 401 |
 | GET `/v1/natter/space/:id` | cookie | — | **200** `{id, name, owner}` | 400 · 401 · 404 |
 | DELETE `/v1/natter/space/:id` | cookie | — | **204** | 400 · 401 · 404 |
+| GET `/v1/natter/space/:id/member` | cookie | — | **200** `[{userId, username, role}]` | 401 · 404 (não é membro) |
+| POST `/v1/natter/space/:id/member` | cookie (owner) | `{username}` | **200** `{userId, username, role:"member"}` | 400 · 401 · 404 · 409 |
+| DELETE `/v1/natter/space/:id/member/:username` | cookie (owner) | — | **204** | 400 · 401 · 404 |
+| GET `/v1/metrics` | — | — | **200** contadores por rota/status | — |
 
 ## 4. Sessão, JWT e cookies
 

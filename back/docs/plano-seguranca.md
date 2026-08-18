@@ -126,13 +126,17 @@ security/
 
 > Só depois de P0–P3. A auditoria registra que ownership simples não escala para recursos compartilhados (spaces com múltiplos membros).
 
-- [ ] Definir modelo: RBAC (roles), ABAC (per-recurso) ou combinação — decisão registrada em docs.
-- [ ] Definir roles e permissions/scopes.
-- [ ] Definir ownership e recursos compartilháveis (ex.: membros de um space).
-- [ ] Centralizar policy checks em um módulo único (ex.: `shared/authz/`) com helpers testáveis.
-- [ ] Testes de matriz de autorização (usuário × recurso × ação → ALLOW/DENY).
-- [ ] Versionamento da API (`/v1`) antes de expor público.
-- [ ] Métricas (ex.: contadores por endpoint/status) e alertas de comportamento anômalo.
+### Decisão de modelo (registrada)
+
+**RBAC + ABAC (híbrido).** RBAC para o papel do usuário dentro do espaço (`owner`/`member` → permissions) e ABAC para decisões por atributo do recurso (mensagem só pelo autor, salvo owner do espaço). A membership é a fonte de verdade (`space_members`); `spaces.owner` foi removido (migração `1787069944593_space-members.ts`).
+
+- [x] Definir modelo: RBAC (roles), ABAC (per-recurso) ou combinação — decisão registrada em docs.
+- [x] Definir roles e permissions/scopes: `owner` e `member`; permissions `space:read`, `space:manage`, `message:write`, `message:update`, `message:delete`.
+- [x] Definir ownership e recursos compartilháveis (ex.: membros de um space): endpoints `POST/GET/DELETE /v1/natter/space/:id/member`; `member` lê/escreve mensagens do espaço; `owner` administra membros e exclui o espaço.
+- [x] Centralizar policy checks em um módulo único (ex.: `shared/authz/`) com helpers testáveis: `authorize(subject, resource, action)` puro em `src/shared/authz/authz.ts`.
+- [x] Testes de matriz de autorização (usuário × recurso × ação → ALLOW/DENY): `src/shared/authz/authz.test.ts` (unit) + `src/security/authz-matrix.test.ts` (integração).
+- [x] Versionamento da API (`/v1`) antes de expor público: rotas em `/v1/auth` e `/v1/natter`; `GET /v1/metrics`.
+- [x] Métricas (ex.: contadores por endpoint/status) e alertas de comportamento anômalo: `src/shared/metrics/` + `GET /v1/metrics` + alerta `metrics_anomaly` (janela 200 reqs, ≥40% 5xx).
 
 ---
 
