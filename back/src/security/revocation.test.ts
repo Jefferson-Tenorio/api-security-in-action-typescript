@@ -15,8 +15,8 @@ function extractCookie(res: request.Response): string {
 }
 
 async function registerAndLogin(username: string): Promise<string> {
-  await request(app).post('/auth/register').send({ password, username }).expect(201);
-  const res = await request(app).post('/auth/login').send({ password, username }).expect(200);
+  await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
+  const res = await request(app).post('/v1/auth/login').send({ password, username }).expect(200);
   return extractCookie(res);
 }
 
@@ -28,11 +28,11 @@ describe('Token revocation — deny-list after logout', () => {
   it('rejects a token reused after logout with 401', async () => {
     const cookie = await registerAndLogin(unique('rev'));
 
-    const before = await request(app).get('/natter/space').set('Cookie', cookie).expect(200);
+    const before = await request(app).get('/v1/natter/space').set('Cookie', cookie).expect(200);
 
-    await request(app).post('/auth/logout').set('Cookie', cookie).expect(200);
+    await request(app).post('/v1/auth/logout').set('Cookie', cookie).expect(200);
 
-    const after = await request(app).get('/natter/space').set('Cookie', cookie);
+    const after = await request(app).get('/v1/natter/space').set('Cookie', cookie);
 
     expect(before.status).toBe(200);
     expect(after.status).toBe(401);
@@ -43,24 +43,24 @@ describe('Token revocation — deny-list after logout', () => {
     const cookieA = await registerAndLogin(unique('rev_a'));
     const cookieB = await registerAndLogin(unique('rev_b'));
 
-    await request(app).post('/auth/logout').set('Cookie', cookieA).expect(200);
+    await request(app).post('/v1/auth/logout').set('Cookie', cookieA).expect(200);
 
-    const res = await request(app).get('/natter/space').set('Cookie', cookieB);
+    const res = await request(app).get('/v1/natter/space').set('Cookie', cookieB);
     expect(res.status).toBe(200);
   });
 
   it('logout without a token is idempotent (200)', async () => {
-    const res = await request(app).post('/auth/logout');
+    const res = await request(app).post('/v1/auth/logout');
     expect(res.status).toBe(200);
   });
 
   it('logging out twice with the same token stays idempotent', async () => {
     const cookie = await registerAndLogin(unique('rev'));
 
-    await request(app).post('/auth/logout').set('Cookie', cookie).expect(200);
-    await request(app).post('/auth/logout').set('Cookie', cookie).expect(200);
+    await request(app).post('/v1/auth/logout').set('Cookie', cookie).expect(200);
+    await request(app).post('/v1/auth/logout').set('Cookie', cookie).expect(200);
 
-    const after = await request(app).get('/natter/space').set('Cookie', cookie);
+    const after = await request(app).get('/v1/natter/space').set('Cookie', cookie);
     expect(after.status).toBe(401);
   });
 });

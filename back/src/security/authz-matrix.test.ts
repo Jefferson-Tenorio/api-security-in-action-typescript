@@ -8,7 +8,7 @@ const app = new App().instance;
 const password = 'SenhaForte123!';
 
 async function createSpace(cookie: string, name: string): Promise<number> {
-  const res = await request(app).post('/natter/space').set('Cookie', cookie).send({ name });
+  const res = await request(app).post('/v1/natter/space').set('Cookie', cookie).send({ name });
   return res.body.id as number;
 }
 
@@ -20,8 +20,8 @@ function extractCookie(res: request.Response): string {
 }
 
 async function registerAndLogin(username: string): Promise<string> {
-  await request(app).post('/auth/register').send({ password, username }).expect(201);
-  const res = await request(app).post('/auth/login').send({ password, username }).expect(200);
+  await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
+  const res = await request(app).post('/v1/auth/login').send({ password, username }).expect(200);
   return extractCookie(res);
 }
 
@@ -37,14 +37,14 @@ describe('Authorization matrix — space membership', () => {
     const memberUsername = await usernameFromCookie(member);
 
     const added = await request(app)
-      .post(`/natter/space/${spaceId}/member`)
+      .post(`/v1/natter/space/${spaceId}/member`)
       .set('Cookie', owner)
       .send({ username: memberUsername });
     expect(added.status).toBe(200);
     expect(added.body).toMatchObject({ role: 'member', username: memberUsername });
 
     const listed = await request(app)
-      .get(`/natter/space/${spaceId}/member`)
+      .get(`/v1/natter/space/${spaceId}/member`)
       .set('Cookie', owner);
     expect(listed.status).toBe(200);
     expect(
@@ -55,12 +55,12 @@ describe('Authorization matrix — space membership', () => {
     ).toBe(true);
 
     const removed = await request(app)
-      .delete(`/natter/space/${spaceId}/member/${memberUsername}`)
+      .delete(`/v1/natter/space/${spaceId}/member/${memberUsername}`)
       .set('Cookie', owner);
     expect(removed.status).toBe(204);
 
     const after = await request(app)
-      .get(`/natter/space/${spaceId}/member`)
+      .get(`/v1/natter/space/${spaceId}/member`)
       .set('Cookie', owner);
     expect(
       after.body.some((m: { username: string }) => m.username === memberUsername),
@@ -78,18 +78,18 @@ describe('Authorization matrix — message actions', () => {
     await addMember(owner, spaceId, ownerUsername, member);
 
     const written = await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', member)
       .send({ content: 'oi membro', space_id: String(spaceId) });
     expect(written.status).toBe(200);
     expect(written.body.author).toBe(await usernameFromCookie(member));
 
-    const listed = await request(app).get('/natter/message').set('Cookie', member);
+    const listed = await request(app).get('/v1/natter/message').set('Cookie', member);
     expect(listed.status).toBe(200);
     expect(listed.body.some((m: { id: number }) => m.id === written.body.id)).toBe(true);
 
     const denied = await request(app)
-      .post(`/natter/space/${spaceId}/member`)
+      .post(`/v1/natter/space/${spaceId}/member`)
       .set('Cookie', member)
       .send({ username: ownerUsername });
     expect(denied.status).toBe(404);
@@ -105,19 +105,19 @@ describe('Authorization matrix — message actions', () => {
     await addMember(owner, spaceId, await usernameFromCookie(owner), memberB);
 
     const message = await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', memberA)
       .send({ content: 'do A', space_id: String(spaceId) })
       .expect(200);
 
     const update = await request(app)
-      .put(`/natter/message/${message.body.id}`)
+      .put(`/v1/natter/message/${message.body.id}`)
       .set('Cookie', memberB)
       .send({ content: 'roubado' });
     expect(update.status).toBe(404);
 
     const del = await request(app)
-      .delete(`/natter/message/${message.body.id}`)
+      .delete(`/v1/natter/message/${message.body.id}`)
       .set('Cookie', memberB);
     expect(del.status).toBe(404);
   });
@@ -130,19 +130,19 @@ describe('Authorization matrix — message actions', () => {
     await addMember(owner, spaceId, await usernameFromCookie(owner), member);
 
     const message = await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', member)
       .send({ content: 'do membro', space_id: String(spaceId) })
       .expect(200);
 
     const update = await request(app)
-      .put(`/natter/message/${message.body.id}`)
+      .put(`/v1/natter/message/${message.body.id}`)
       .set('Cookie', owner)
       .send({ content: 'editado pelo owner' });
     expect(update.status).toBe(200);
 
     const del = await request(app)
-      .delete(`/natter/message/${message.body.id}`)
+      .delete(`/v1/natter/message/${message.body.id}`)
       .set('Cookie', owner);
     expect(del.status).toBe(204);
   });
@@ -154,22 +154,22 @@ describe('Authorization matrix — membership lifecycle', () => {
     const stranger = await registerAndLogin(unique('m_stranger'));
     const spaceId = await createSpace(owner, 'Matriz secreta');
 
-    const readSpace = await request(app).get(`/natter/space/${spaceId}`).set('Cookie', stranger);
+    const readSpace = await request(app).get(`/v1/natter/space/${spaceId}`).set('Cookie', stranger);
     expect(readSpace.status).toBe(404);
 
     const writeMessage = await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', stranger)
       .send({ content: 'intruso', space_id: String(spaceId) });
     expect(writeMessage.status).toBe(404);
 
     const manage = await request(app)
-      .post(`/natter/space/${spaceId}/member`)
+      .post(`/v1/natter/space/${spaceId}/member`)
       .set('Cookie', stranger)
       .send({ username: 'qualquer' });
     expect(manage.status).toBe(404);
 
-    const deleteSpace = await request(app).delete(`/natter/space/${spaceId}`).set('Cookie', stranger);
+    const deleteSpace = await request(app).delete(`/v1/natter/space/${spaceId}`).set('Cookie', stranger);
     expect(deleteSpace.status).toBe(404);
   });
 
@@ -182,25 +182,25 @@ describe('Authorization matrix — membership lifecycle', () => {
 
     await addMember(owner, spaceId, ownerUsername, member);
     expect(
-      (await request(app).get(`/natter/space/${spaceId}`).set('Cookie', member)).status,
+      (await request(app).get(`/v1/natter/space/${spaceId}`).set('Cookie', member)).status,
     ).toBe(200);
 
     const removed = await request(app)
-      .delete(`/natter/space/${spaceId}/member/${memberUsername}`)
+      .delete(`/v1/natter/space/${spaceId}/member/${memberUsername}`)
       .set('Cookie', owner);
     expect(removed.status).toBe(204);
 
     expect(
-      (await request(app).get(`/natter/space/${spaceId}`).set('Cookie', member)).status,
+      (await request(app).get(`/v1/natter/space/${spaceId}`).set('Cookie', member)).status,
     ).toBe(404);
 
     const reAdded = await request(app)
-      .post(`/natter/space/${spaceId}/member`)
+      .post(`/v1/natter/space/${spaceId}/member`)
       .set('Cookie', owner)
       .send({ username: memberUsername });
     expect(reAdded.status).toBe(200);
     expect(
-      (await request(app).get(`/natter/space/${spaceId}`).set('Cookie', member)).status,
+      (await request(app).get(`/v1/natter/space/${spaceId}`).set('Cookie', member)).status,
     ).toBe(200);
   });
 
@@ -213,12 +213,12 @@ describe('Authorization matrix — membership lifecycle', () => {
     await addMember(owner, spaceId, ownerUsername, member);
 
     const removeOwner = await request(app)
-      .delete(`/natter/space/${spaceId}/member/${ownerUsername}`)
+      .delete(`/v1/natter/space/${spaceId}/member/${ownerUsername}`)
       .set('Cookie', member);
     expect(removeOwner.status).toBe(404);
 
     const ownerStillThere = await request(app)
-      .get(`/natter/space/${spaceId}/member`)
+      .get(`/v1/natter/space/${spaceId}/member`)
       .set('Cookie', owner);
     expect(ownerStillThere.status).toBe(200);
     expect(
@@ -236,7 +236,7 @@ async function addMember(
   memberCookie: string,
 ): Promise<void> {
   const res = await request(app)
-    .post(`/natter/space/${spaceId}/member`)
+    .post(`/v1/natter/space/${spaceId}/member`)
     .set('Cookie', ownerCookie)
     .send({ username: await usernameFromCookie(memberCookie) });
   expect(res.status).toBe(200);

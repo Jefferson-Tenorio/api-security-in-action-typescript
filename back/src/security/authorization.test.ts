@@ -15,8 +15,8 @@ function extractCookie(res: request.Response): string {
 }
 
 async function registerAndLogin(username: string): Promise<string> {
-  await request(app).post('/auth/register').send({ password, username }).expect(201);
-  const res = await request(app).post('/auth/login').send({ password, username }).expect(200);
+  await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
+  const res = await request(app).post('/v1/auth/login').send({ password, username }).expect(200);
   return extractCookie(res);
 }
 
@@ -30,27 +30,27 @@ describe('Authorization — cross-user ownership matrix', () => {
     const cookieB = await registerAndLogin(unique('authz_b'));
 
     const space = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookieA)
       .send({ name: 'Sala da A' })
       .expect(200);
     const message = await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', cookieA)
       .send({ content: 'segredo', space_id: String(space.body.id) })
       .expect(200);
 
     const spaceChecks = [
-      request(app).get(`/natter/space/${space.body.id}`).set('Cookie', cookieB),
-      request(app).delete(`/natter/space/${space.body.id}`).set('Cookie', cookieB),
+      request(app).get(`/v1/natter/space/${space.body.id}`).set('Cookie', cookieB),
+      request(app).delete(`/v1/natter/space/${space.body.id}`).set('Cookie', cookieB),
     ];
     const messageChecks = [
-      request(app).get(`/natter/message/${message.body.id}`).set('Cookie', cookieB),
+      request(app).get(`/v1/natter/message/${message.body.id}`).set('Cookie', cookieB),
       request(app)
-        .put(`/natter/message/${message.body.id}`)
+        .put(`/v1/natter/message/${message.body.id}`)
         .set('Cookie', cookieB)
         .send({ content: 'hackeado' }),
-      request(app).delete(`/natter/message/${message.body.id}`).set('Cookie', cookieB),
+      request(app).delete(`/v1/natter/message/${message.body.id}`).set('Cookie', cookieB),
     ];
 
     for (const check of [...spaceChecks, ...messageChecks]) {
@@ -59,11 +59,11 @@ describe('Authorization — cross-user ownership matrix', () => {
       expect(res.body.error.message).toBeTruthy();
     }
 
-    const spaces = await request(app).get('/natter/space').set('Cookie', cookieB).expect(200);
+    const spaces = await request(app).get('/v1/natter/space').set('Cookie', cookieB).expect(200);
     expect(spaces.body.some((s: { id: number }) => s.id === space.body.id)).toBe(false);
 
     const messages = await request(app)
-      .get('/natter/message')
+      .get('/v1/natter/message')
       .set('Cookie', cookieB)
       .expect(200);
     expect(messages.body.some((m: { id: number }) => m.id === message.body.id)).toBe(false);
@@ -73,28 +73,28 @@ describe('Authorization — cross-user ownership matrix', () => {
     const cookieA = await registerAndLogin(unique('authz_a'));
 
     const space = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookieA)
       .send({ name: 'Minha sala' })
       .expect(200);
     const message = await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', cookieA)
       .send({ content: 'meu segredo', space_id: String(space.body.id) })
       .expect(200);
 
-    expect((await request(app).get(`/natter/space/${space.body.id}`).set('Cookie', cookieA)).status).toBe(200);
-    expect((await request(app).get(`/natter/message/${message.body.id}`).set('Cookie', cookieA)).status).toBe(200);
+    expect((await request(app).get(`/v1/natter/space/${space.body.id}`).set('Cookie', cookieA)).status).toBe(200);
+    expect((await request(app).get(`/v1/natter/message/${message.body.id}`).set('Cookie', cookieA)).status).toBe(200);
 
     const updated = await request(app)
-      .put(`/natter/message/${message.body.id}`)
+      .put(`/v1/natter/message/${message.body.id}`)
       .set('Cookie', cookieA)
       .send({ content: 'atualizado' })
       .expect(200);
     expect(updated.body.content).toBe('atualizado');
 
-    expect((await request(app).delete(`/natter/message/${message.body.id}`).set('Cookie', cookieA)).status).toBe(204);
-    expect((await request(app).delete(`/natter/space/${space.body.id}`).set('Cookie', cookieA)).status).toBe(204);
+    expect((await request(app).delete(`/v1/natter/message/${message.body.id}`).set('Cookie', cookieA)).status).toBe(204);
+    expect((await request(app).delete(`/v1/natter/space/${space.body.id}`).set('Cookie', cookieA)).status).toBe(204);
   });
 
   it('does not distinguish owned from nonexistent resources (404, no enumeration)', async () => {
@@ -102,14 +102,14 @@ describe('Authorization — cross-user ownership matrix', () => {
     const cookieB = await registerAndLogin(unique('authz_b'));
 
     const space = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookieA)
       .send({ name: 'Sala' })
       .expect(200);
     const owned = await request(app)
-      .get(`/natter/space/${space.body.id}`)
+      .get(`/v1/natter/space/${space.body.id}`)
       .set('Cookie', cookieB);
-    const missing = await request(app).get('/natter/space/999999').set('Cookie', cookieB);
+    const missing = await request(app).get('/v1/natter/space/999999').set('Cookie', cookieB);
 
     expect(owned.status).toBe(404);
     expect(missing.status).toBe(404);

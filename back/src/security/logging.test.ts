@@ -30,7 +30,7 @@ describe('Structured JSON logging', () => {
   it('logs requests and responses as one JSON line per event', async () => {
     const spy = vi.spyOn(console, 'log');
 
-    await request(app).get('/natter/space').expect(401);
+    await request(app).get('/v1/natter/space').expect(401);
 
     const lines = jsonLines(spy);
     expect(lines.length).toBeGreaterThan(0);
@@ -39,7 +39,7 @@ describe('Structured JSON logging', () => {
       (line) => line.type === 'request' && line.method === 'GET',
     );
     expect(requestLog).toBeTruthy();
-    expect(requestLog?.path).toBe('/natter/space');
+    expect(requestLog?.path).toBe('/v1/natter/space');
     expect(requestLog?.requestId).toBeTruthy();
     expect(requestLog?.level).toBe('info');
     expect(requestLog?.timestamp).toBeTruthy();
@@ -55,7 +55,7 @@ describe('Structured JSON logging', () => {
     const spy = vi.spyOn(console, 'log');
 
     await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password, username: unique('log') })
       .expect(201);
 
@@ -70,7 +70,7 @@ describe('Structured JSON logging', () => {
     process.env.LOG_LEVEL = 'error';
     const spy = vi.spyOn(console, 'log');
 
-    await request(app).get('/natter/space').expect(401);
+    await request(app).get('/v1/natter/space').expect(401);
 
     expect(jsonLines(spy)).toHaveLength(0);
   });

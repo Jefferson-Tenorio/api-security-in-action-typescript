@@ -46,7 +46,7 @@ sequenceDiagram
     participant D as PostgreSQL
 
     Note over U,D: REGISTER
-    F->>A: POST /auth/register {username, password}
+    F->>A: POST /v1/auth/register {username, password}
     A->>D: SELECT * FROM users WHERE username
     alt já existe
         A-->>F: 409 {"error":{"message":"Username already exists"}}
@@ -58,14 +58,14 @@ sequenceDiagram
     end
 
     Note over U,D: LOGIN
-    F->>A: POST /auth/login {username, password} (credentials:'include')
+    F->>A: POST /v1/auth/login {username, password} (credentials:'include')
     A->>D: SELECT * FROM users
     A->>A: bcrypt.compare → JWT RS256 {iss, aud, jti, userId, username, exp} (15min)
     A-->>F: 200 {"message":"Login successful"} + Set-Cookie token (HttpOnly, SameSite=strict, secure só em prod, maxAge 15min)
     Note over F: Browser guarda o cookie (JS não consegue ler — HttpOnly)<br/>navigate('/home') — rota existe em App.tsx
 
     Note over U,D: LOGOUT
-    F->>A: POST /auth/logout (cookie enviado automaticamente)
+    F->>A: POST /v1/auth/logout (cookie enviado automaticamente)
     A->>A: verify token → extrai jti
     A->>D: INSERT INTO token_denylist (jti, user_id, expires_at)
     A-->>F: 200 {"message":"Logged out"} + clearCookie
@@ -76,18 +76,18 @@ sequenceDiagram
 
 | Endpoint | Auth | Body/Query | Sucesso | Erros |
 |---|---|---|---|---|
-| POST `/auth/register` | — | `{username, password}` (zod, strict) | **201** `{message:"User created"}` | 400 validação · 409 `Username already exists` |
-| POST `/auth/login` | — | `{username, password}` | **200** `{message:"Login successful"}` + **Set-Cookie `token`** | 400 · 401 `Invalid credentials` · 429 |
-| POST `/auth/logout` | cookie (opcional) | — | **200** `{message:"Logged out"}` + revoga o token | — |
-| POST `/natter/message` | cookie | `{content, space_id}` (`author` vem da sessão) | **200** `{id, author, content, msg_time, space_id}` | 400 · 401 · 429 |
-| GET `/natter/message?limit&offset` | cookie | `limit` 1–100 (default 20), `offset` ≥ 0 | **200** `[{id, author, content, msg_time, space_id}]` | 400 query inválida · 401 |
-| GET `/natter/message/:id` | cookie | — | **200** `{id, author, content, msg_time, space_id}` | 400 id inválido · 401 · 404 (não é seu) |
-| PUT `/natter/message/:id` | cookie | `{content}` | **200** `{...message}` | 400 · 401 · 404 |
-| DELETE `/natter/message/:id` | cookie | — | **204** corpo vazio | 400 · 401 · 404 |
-| POST `/natter/space` | cookie | `{name}` (`owner` vem da sessão) | **200** `{id, name, owner}` | 400 · 401 · 429 |
-| GET `/natter/space?limit&offset` | cookie | idem message | **200** `[{id, name, owner}]` | 400 · 401 |
-| GET `/natter/space/:id` | cookie | — | **200** `{id, name, owner}` | 400 · 401 · 404 |
-| DELETE `/natter/space/:id` | cookie | — | **204** | 400 · 401 · 404 |
+| POST `/v1/auth/register` | — | `{username, password}` (zod, strict) | **201** `{message:"User created"}` | 400 validação · 409 `Username already exists` |
+| POST `/v1/auth/login` | — | `{username, password}` | **200** `{message:"Login successful"}` + **Set-Cookie `token`** | 400 · 401 `Invalid credentials` · 429 |
+| POST `/v1/auth/logout` | cookie (opcional) | — | **200** `{message:"Logged out"}` + revoga o token | — |
+| POST `/v1/natter/message` | cookie | `{content, space_id}` (`author` vem da sessão) | **200** `{id, author, content, msg_time, space_id}` | 400 · 401 · 429 |
+| GET `/v1/natter/message?limit&offset` | cookie | `limit` 1–100 (default 20), `offset` ≥ 0 | **200** `[{id, author, content, msg_time, space_id}]` | 400 query inválida · 401 |
+| GET `/v1/natter/message/:id` | cookie | — | **200** `{id, author, content, msg_time, space_id}` | 400 id inválido · 401 · 404 (não é seu) |
+| PUT `/v1/natter/message/:id` | cookie | `{content}` | **200** `{...message}` | 400 · 401 · 404 |
+| DELETE `/v1/natter/message/:id` | cookie | — | **204** corpo vazio | 400 · 401 · 404 |
+| POST `/v1/natter/space` | cookie | `{name}` (`owner` vem da sessão) | **200** `{id, name, owner}` | 400 · 401 · 429 |
+| GET `/v1/natter/space?limit&offset` | cookie | idem message | **200** `[{id, name, owner}]` | 400 · 401 |
+| GET `/v1/natter/space/:id` | cookie | — | **200** `{id, name, owner}` | 400 · 401 · 404 |
+| DELETE `/v1/natter/space/:id` | cookie | — | **204** | 400 · 401 · 404 |
 
 ## 4. Sessão, JWT e cookies
 

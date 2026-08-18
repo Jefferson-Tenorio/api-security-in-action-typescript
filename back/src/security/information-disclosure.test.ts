@@ -15,8 +15,8 @@ function extractCookie(res: request.Response): string {
 }
 
 async function registerAndLogin(username: string): Promise<string> {
-  await request(app).post('/auth/register').send({ password, username }).expect(201);
-  const res = await request(app).post('/auth/login').send({ password, username }).expect(200);
+  await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
+  const res = await request(app).post('/v1/auth/login').send({ password, username }).expect(200);
   return extractCookie(res);
 }
 
@@ -26,35 +26,35 @@ function unique(prefix: string): string {
 
 describe('Information disclosure — consistent error format', () => {
   it('every error status uses the {error:{message}} shape', async () => {
-    const badPayload = await request(app).post('/auth/register').send({ password, username: 'ab' });
+    const badPayload = await request(app).post('/v1/auth/register').send({ password, username: 'ab' });
     expect(badPayload.status).toBe(400);
     expect(badPayload.body.error.message).toBeTruthy();
 
-    const unauthenticated = await request(app).get('/natter/space');
+    const unauthenticated = await request(app).get('/v1/natter/space');
     expect(unauthenticated.status).toBe(401);
     expect(unauthenticated.body.error.message).toBeTruthy();
 
     const cookie = await registerAndLogin(unique('disc'));
-    const missing = await request(app).get('/natter/message/999999').set('Cookie', cookie);
+    const missing = await request(app).get('/v1/natter/message/999999').set('Cookie', cookie);
     expect(missing.status).toBe(404);
     expect(missing.body.error.message).toBeTruthy();
 
     const username = unique('disc');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
-    const duplicate = await request(app).post('/auth/register').send({ password, username });
+    await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
+    const duplicate = await request(app).post('/v1/auth/register').send({ password, username });
     expect(duplicate.status).toBe(409);
     expect(duplicate.body.error.message).toBeTruthy();
   });
 
   it('does not leak whether a username exists (login 401 uniform)', async () => {
     const nonexistent = await request(app)
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .send({ password, username: `ghost_${Date.now()}` });
 
     const username = unique('disc');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
+    await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
     const wrongPassword = await request(app)
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .send({ password: 'senha-errada', username });
 
     expect(nonexistent.status).toBe(401);
@@ -66,7 +66,7 @@ describe('Information disclosure — consistent error format', () => {
 describe('Information disclosure — credentials never echoed', () => {
   it('register response does not include the password', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password, username: unique('disc') });
 
     expect(res.status).toBe(201);
@@ -76,7 +76,7 @@ describe('Information disclosure — credentials never echoed', () => {
 
   it('validation error details do not echo the password value', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password: 'curta1', username: unique('disc') });
 
     expect(res.status).toBe(400);
@@ -86,10 +86,10 @@ describe('Information disclosure — credentials never echoed', () => {
 
   it('login failure response does not echo the password', async () => {
     const username = unique('disc');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
+    await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
 
     const res = await request(app)
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .send({ password: 'senha-errada', username });
 
     expect(res.status).toBe(401);
@@ -99,9 +99,9 @@ describe('Information disclosure — credentials never echoed', () => {
 
   it('successful login cookie does not expose the password in the body', async () => {
     const username = unique('disc');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
+    await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
 
-    const res = await request(app).post('/auth/login').send({ password, username });
+    const res = await request(app).post('/v1/auth/login').send({ password, username });
 
     expect(res.status).toBe(200);
     expect(JSON.stringify(res.body)).not.toContain(password);

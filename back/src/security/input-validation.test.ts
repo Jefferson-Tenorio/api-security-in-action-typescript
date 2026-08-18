@@ -14,7 +14,7 @@ function unique(prefix: string): string {
 describe('Input validation — auth', () => {
   it('register rejects empty username with 400', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password, username: '' });
 
     expect(res.status).toBe(400);
@@ -23,14 +23,14 @@ describe('Input validation — auth', () => {
   });
 
   it('register rejects username shorter than 3 characters', async () => {
-    const res = await request(app).post('/auth/register').send({ password, username: 'ab' });
+    const res = await request(app).post('/v1/auth/register').send({ password, username: 'ab' });
 
     expect(res.status).toBe(400);
   });
 
   it('register rejects username longer than 50 characters', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password, username: 'a'.repeat(51) });
 
     expect(res.status).toBe(400);
@@ -38,21 +38,21 @@ describe('Input validation — auth', () => {
 
   it('register rejects username with invalid characters', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password, username: 'inva lid!' });
 
     expect(res.status).toBe(400);
   });
 
   it('register rejects password shorter than 8 characters', async () => {
-    const res = await request(app).post('/auth/register').send({ password: 'curta1', username: unique('val') });
+    const res = await request(app).post('/v1/auth/register').send({ password: 'curta1', username: unique('val') });
 
     expect(res.status).toBe(400);
   });
 
   it('register rejects password longer than 72 characters (bcrypt limit)', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password: 'a'.repeat(73), username: unique('val') });
 
     expect(res.status).toBe(400);
@@ -60,7 +60,7 @@ describe('Input validation — auth', () => {
 
   it('register rejects unknown fields (strict schema)', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ email: 'x@x.com', password, username: unique('val') });
 
     expect(res.status).toBe(400);
@@ -68,14 +68,14 @@ describe('Input validation — auth', () => {
   });
 
   it('login rejects malformed body with 400', async () => {
-    const res = await request(app).post('/auth/login').send({ password });
+    const res = await request(app).post('/v1/auth/login').send({ password });
 
     expect(res.status).toBe(400);
   });
 
   it('invalid input never reaches the database (no 500)', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password, username: 'a'.repeat(200) });
 
     expect(res.status).toBe(400);

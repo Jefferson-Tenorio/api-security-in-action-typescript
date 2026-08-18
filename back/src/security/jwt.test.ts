@@ -49,7 +49,7 @@ describe('JWT claims — signature, integrity and issuer/audience', () => {
     });
 
     const res = await request(app)
-      .get('/natter/space')
+      .get('/v1/natter/space')
       .set('Cookie', `token=${token}`);
 
     expect(res.status).toBe(401);
@@ -63,7 +63,7 @@ describe('JWT claims — signature, integrity and issuer/audience', () => {
     ).toString('base64url');
 
     const res = await request(app)
-      .get('/natter/space')
+      .get('/v1/natter/space')
       .set('Cookie', `token=${header}.${tampered}.${signature}`);
 
     expect(res.status).toBe(401);
@@ -73,7 +73,7 @@ describe('JWT claims — signature, integrity and issuer/audience', () => {
     const token = signWithRealKey({ expiresIn: -60 });
 
     const res = await request(app)
-      .get('/natter/space')
+      .get('/v1/natter/space')
       .set('Cookie', `token=${token}`);
 
     expect(res.status).toBe(401);
@@ -83,7 +83,7 @@ describe('JWT claims — signature, integrity and issuer/audience', () => {
     const token = signWithRealKey({ issuer: 'evil-issuer' });
 
     const res = await request(app)
-      .get('/natter/space')
+      .get('/v1/natter/space')
       .set('Cookie', `token=${token}`);
 
     expect(res.status).toBe(401);
@@ -94,7 +94,7 @@ describe('JWT claims — signature, integrity and issuer/audience', () => {
     const token = signWithRealKey({ audience: 'evil-audience' });
 
     const res = await request(app)
-      .get('/natter/space')
+      .get('/v1/natter/space')
       .set('Cookie', `token=${token}`);
 
     expect(res.status).toBe(401);
@@ -104,11 +104,11 @@ describe('JWT claims — signature, integrity and issuer/audience', () => {
   it('issues tokens with iss, aud and jti claims', async () => {
     const username = `jwt_${Date.now()}`;
     await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password, username })
       .expect(201);
     const res = await request(app)
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .send({ password, username })
       .expect(200);
 

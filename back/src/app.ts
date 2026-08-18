@@ -54,7 +54,7 @@ export class App {
     const natter = NatterModule(auth.authenticate);
 
     this.instance.use(audit.middleware);
-    this.instance.use('/auth', auth.router);
-    this.instance.use('/natter', natter.router);
+    this.instance.use('/v1/auth', auth.router);
+    this.instance.use('/v1/natter', natter.router);
   }
 }

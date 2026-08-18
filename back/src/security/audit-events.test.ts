@@ -44,8 +44,8 @@ async function lastEventByResource(action: string, resource: string): Promise<Se
 }
 
 async function registerAndLogin(username: string): Promise<string> {
-  await request(app).post('/auth/register').send({ password, username }).expect(201);
-  const res = await request(app).post('/auth/login').send({ password, username }).expect(200);
+  await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
+  const res = await request(app).post('/v1/auth/login').send({ password, username }).expect(200);
   return extractCookie(res);
 }
 
@@ -65,10 +65,10 @@ async function userIdOf(username: string): Promise<string> {
 describe('Semantic audit events', () => {
   it('records AUTH_LOGIN_SUCCESS with the user id as actor', async () => {
     const username = unique('ev');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
+    await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
     const userId = await userIdOf(username);
 
-    await request(app).post('/auth/login').send({ password, username }).expect(200);
+    await request(app).post('/v1/auth/login').send({ password, username }).expect(200);
 
     const event = await lastEventByActor('AUTH_LOGIN_SUCCESS', userId);
     expect(event).toBeTruthy();
@@ -80,7 +80,7 @@ describe('Semantic audit events', () => {
     const username = unique('ev');
 
     await request(app)
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .send({ password: 'senha-errada', username })
       .expect(401);
 
@@ -95,7 +95,7 @@ describe('Semantic audit events', () => {
     const cookie = await registerAndLogin(username);
     const userId = await userIdOf(username);
 
-    await request(app).post('/auth/logout').set('Cookie', cookie).expect(200);
+    await request(app).post('/v1/auth/logout').set('Cookie', cookie).expect(200);
 
     const event = await lastEventByActor('AUTH_LOGOUT', userId);
     expect(event).toBeTruthy();
@@ -106,23 +106,23 @@ describe('Semantic audit events', () => {
   it('records RESOURCE_CREATED/UPDATED/DELETED for messages', async () => {
     const cookie = await registerAndLogin(unique('ev'));
     const space = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookie)
       .send({ name: 'Sala ev' })
       .expect(200);
     const message = await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', cookie)
       .send({ content: 'primeira', space_id: String(space.body.id) })
       .expect(200);
 
     await request(app)
-      .put(`/natter/message/${message.body.id}`)
+      .put(`/v1/natter/message/${message.body.id}`)
       .set('Cookie', cookie)
       .send({ content: 'segunda' })
       .expect(200);
     await request(app)
-      .delete(`/natter/message/${message.body.id}`)
+      .delete(`/v1/natter/message/${message.body.id}`)
       .set('Cookie', cookie)
       .expect(204);
 
@@ -139,16 +139,16 @@ describe('Semantic audit events', () => {
   });
 
   it('records AUTHZ_DENIED for unauthenticated and invalid-token requests', async () => {
-    await request(app).get('/natter/space').expect(401);
+    await request(app).get('/v1/natter/space').expect(401);
     await request(app)
-      .get('/natter/space')
+      .get('/v1/natter/space')
       .set('Cookie', 'token=garbage')
       .expect(401);
 
     const rows = await dbUser<SecurityEventRow[]>`
       SELECT action, actor, outcome, resource
       FROM security_events
-      WHERE action = 'AUTHZ_DENIED' AND resource = '/natter/space' AND actor = 'anonymous'
+      WHERE action = 'AUTHZ_DENIED' AND resource = '/v1/natter/space' AND actor = 'anonymous'
       ORDER BY id DESC
       LIMIT 2
     `;

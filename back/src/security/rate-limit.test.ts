@@ -16,8 +16,8 @@ function extractCookie(res: request.Response): string {
 }
 
 async function registerAndLogin(username: string): Promise<string> {
-  await request(app).post('/auth/register').send({ password, username }).expect(201);
-  const res = await request(app).post('/auth/login').send({ password, username }).expect(200);
+  await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
+  const res = await request(app).post('/v1/auth/login').send({ password, username }).expect(200);
   return extractCookie(res);
 }
 
@@ -30,18 +30,18 @@ describe('Rate limit — identity-based', () => {
     'blocks login after the per-username limit with 429 and Retry-After',
     async () => {
       const username = unique('rl');
-      await request(app).post('/auth/register').send({ password, username }).expect(201);
+      await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
 
       let last: request.Response;
       for (let i = 0; i < 20; i++) {
         last = await request(app)
-          .post('/auth/login')
+          .post('/v1/auth/login')
           .send({ password: 'senha-errada', username });
         expect(last.status).toBe(401);
       }
 
       const blocked = await request(app)
-        .post('/auth/login')
+        .post('/v1/auth/login')
         .send({ password: 'senha-errada', username });
 
       expect(blocked.status).toBe(429);
@@ -54,18 +54,18 @@ describe('Rate limit — identity-based', () => {
   it('a different username is not affected by the lockout', async () => {
     const blockedUser = unique('rl');
     await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password, username: blockedUser })
       .expect(201);
     for (let i = 0; i < 21; i++) {
       await request(app)
-        .post('/auth/login')
+        .post('/v1/auth/login')
         .send({ password: 'senha-errada', username: blockedUser });
     }
 
     const username = unique('rl');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
-    const res = await request(app).post('/auth/login').send({ password, username });
+    await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
+    const res = await request(app).post('/v1/auth/login').send({ password, username });
 
     expect(res.status).toBe(200);
   });
@@ -77,20 +77,20 @@ describe('Rate limit — identity-based', () => {
     let last: request.Response;
     for (let i = 0; i < 20; i++) {
       last = await request(app)
-        .post('/natter/space')
+        .post('/v1/natter/space')
         .set('Cookie', cookieA)
         .send({ name: `Sala ${i}` });
       expect(last.status).toBe(200);
     }
 
     const blocked = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookieA)
       .send({ name: 'Bloqueada' });
     expect(blocked.status).toBe(429);
 
     const other = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookieB)
       .send({ name: 'Outra sala' });
     expect(other.status).toBe(200);
