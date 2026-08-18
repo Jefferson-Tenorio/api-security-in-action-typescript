@@ -33,14 +33,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.2
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: back/.nvmrc
           cache: pnpm
           cache-dependency-path: back/pnpm-lock.yaml
-
-      - name: Enable pnpm
-        run: corepack enable
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -90,14 +91,14 @@ jobs:
           tags: natter-backend:ci
 
       - name: Trivy image scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: natter-backend:ci
           severity: HIGH,CRITICAL
           exit-code: "0"
 
       - name: Run osv-scanner
-        uses: google/osv-scanner-action@v1
+        uses: google/osv-scanner-action/osv-scanner-action@v2.5.1
         with:
           scan-args: |-
             --recursive
