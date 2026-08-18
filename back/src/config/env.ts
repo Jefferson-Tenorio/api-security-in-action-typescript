@@ -14,7 +14,9 @@ export const env = {
   databaseUrl: required('DATABASE_URL'),
   databaseUrlAdmin: required('DATABASE_URL_ADMIN'),
   jwt: {
+    audience: process.env.JWT_AUDIENCE ?? 'natter-web',
     expiresInMs: Number(process.env.JWT_EXPIRES_IN_MS) || 15 * 60 * 1000,
+    issuer: process.env.JWT_ISSUER ?? 'natter-api',
     privateKeyPath:
       process.env.JWT_PRIVATE_KEY_PATH ?? path.join(certsDir, 'private.pem'),
     publicKeyPath:

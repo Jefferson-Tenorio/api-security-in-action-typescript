@@ -15,6 +15,8 @@ export function AuthModule() {
     fs.readFileSync(env.jwt.privateKeyPath),
     fs.readFileSync(env.jwt.publicKeyPath),
     env.jwt.expiresInMs,
+    env.jwt.issuer,
+    env.jwt.audience,
   );
   const service = new AuthService(repository, tokenService);
   const controller = new AuthController(service);
