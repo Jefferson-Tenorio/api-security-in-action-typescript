@@ -15,8 +15,8 @@ function extractCookie(res: request.Response): string {
 }
 
 async function registerAndLogin(username: string): Promise<string> {
-  await request(app).post('/auth/register').send({ password, username }).expect(201);
-  const res = await request(app).post('/auth/login').send({ password, username }).expect(200);
+  await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
+  const res = await request(app).post('/v1/auth/login').send({ password, username }).expect(200);
   return extractCookie(res);
 }
 
@@ -28,41 +28,41 @@ describe('Pagination — resource limits', () => {
   it('applies a default limit to list endpoints', async () => {
     const cookie = await registerAndLogin(unique('page'));
     const space = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookie)
       .send({ name: 'Sala Pag' })
       .expect(200);
 
     for (let i = 0; i < 25; i++) {
       await request(app)
-        .post('/natter/message')
+        .post('/v1/natter/message')
         .set('Cookie', cookie)
         .send({ content: `msg ${i}`, space_id: String(space.body.id) })
         .expect(200);
     }
 
-    const res = await request(app).get('/natter/message').set('Cookie', cookie).expect(200);
+    const res = await request(app).get('/v1/natter/message').set('Cookie', cookie).expect(200);
     expect(res.body).toHaveLength(20);
   });
 
   it('respects limit and offset', async () => {
     const cookie = await registerAndLogin(unique('page'));
     const space = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookie)
       .send({ name: 'Sala Pag2' })
       .expect(200);
 
     for (let i = 0; i < 10; i++) {
       await request(app)
-        .post('/natter/message')
+        .post('/v1/natter/message')
         .set('Cookie', cookie)
         .send({ content: `msg ${i}`, space_id: String(space.body.id) })
         .expect(200);
     }
 
     const page2 = await request(app)
-      .get('/natter/message?limit=4&offset=8')
+      .get('/v1/natter/message?limit=4&offset=8')
       .set('Cookie', cookie)
       .expect(200);
     expect(page2.body).toHaveLength(2);
@@ -72,7 +72,7 @@ describe('Pagination — resource limits', () => {
     const cookie = await registerAndLogin(unique('page'));
 
     const res = await request(app)
-      .get('/natter/message?limit=101')
+      .get('/v1/natter/message?limit=101')
       .set('Cookie', cookie);
 
     expect(res.status).toBe(400);
@@ -83,7 +83,7 @@ describe('Pagination — resource limits', () => {
     const cookie = await registerAndLogin(unique('page'));
 
     const res = await request(app)
-      .get('/natter/message?limit=abc')
+      .get('/v1/natter/message?limit=abc')
       .set('Cookie', cookie);
 
     expect(res.status).toBe(400);
@@ -94,7 +94,7 @@ describe('Pagination — resource limits', () => {
     const cookie = await registerAndLogin(unique('page'));
 
     const res = await request(app)
-      .get('/natter/space?offset=-1')
+      .get('/v1/natter/space?offset=-1')
       .set('Cookie', cookie);
 
     expect(res.status).toBe(400);
@@ -103,6 +103,6 @@ describe('Pagination — resource limits', () => {
 
 afterAll(async () => {
   await dbAdmin`DELETE FROM messages WHERE author LIKE 'page_%'`;
-  await dbAdmin`DELETE FROM spaces WHERE owner LIKE 'page_%'`;
+  await dbAdmin`DELETE FROM spaces WHERE id IN (SELECT sm.space_id FROM space_members sm JOIN users u ON u.id = sm.user_id WHERE u.username LIKE 'page_%')`;
   await dbUser`DELETE FROM users WHERE username LIKE 'page_%'`;
 });

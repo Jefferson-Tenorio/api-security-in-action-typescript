@@ -17,6 +17,10 @@ const contentSchema = z.object({
 
 const idSchema = z.coerce.number().int().positive();
 
+const usernameSchema = z.object({
+  username: z.string().min(1, 'Username cannot be empty').max(50),
+});
+
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
@@ -50,6 +54,12 @@ export function parseMessage(body: unknown): z.infer<typeof messageSchema> {
 
 export function parseSpace(body: unknown): z.infer<typeof spaceSchema> {
   const result = spaceSchema.safeParse(body);
+  if (!result.success) return reject('Invalid payload', result.error.issues);
+  return result.data;
+}
+
+export function parseUsername(body: unknown): z.infer<typeof usernameSchema> {
+  const result = usernameSchema.safeParse(body);
   if (!result.success) return reject('Invalid payload', result.error.issues);
   return result.data;
 }

@@ -153,9 +153,9 @@ pnpm dev
 
 ## Endpoints principais
 
-- `POST /auth/register` — criar usuário
-- `POST /auth/login` — login e criação de cookie seguro
-- `POST /auth/logout` — encerrar sessão
+- `POST /v1/auth/register` — criar usuário
+- `POST /v1/auth/login` — login e criação de cookie seguro
+- `POST /v1/auth/logout` — encerrar sessão
 - `GET /natter` — rota protegida de exemplo
 
 ## Segurança aplicada

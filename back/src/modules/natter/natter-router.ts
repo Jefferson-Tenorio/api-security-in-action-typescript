@@ -25,6 +25,9 @@ export function NatterRouter(
   router.get('/space', defaultLimiter, controller.findAllSpace);
   router.get('/space/:id', defaultLimiter, controller.findByIdSpace);
   router.delete('/space/:id', writeLimiter, controller.deleteSpace);
+  router.get('/space/:id/member', defaultLimiter, controller.listMembers);
+  router.post('/space/:id/member', writeLimiter, controller.addMember);
+  router.delete('/space/:id/member/:username', writeLimiter, controller.removeMember);
 
   return router;
 }

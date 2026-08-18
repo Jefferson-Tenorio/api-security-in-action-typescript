@@ -16,11 +16,11 @@ function extractCookie(res: request.Response): string {
 
 async function registerAndLogin(username: string): Promise<string> {
   await request(app)
-    .post('/auth/register')
+    .post('/v1/auth/register')
     .send({ password, username })
     .expect(201);
   const res = await request(app)
-    .post('/auth/login')
+    .post('/v1/auth/login')
     .send({ password, username })
     .expect(200);
   return extractCookie(res);
@@ -34,7 +34,7 @@ describe('Auth contract', () => {
   it('register creates a user and returns 201', async () => {
     const username = unique('test_a');
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ password, username });
 
     expect(res.status).toBe(201);
@@ -43,9 +43,9 @@ describe('Auth contract', () => {
 
   it('register rejects duplicate username with 409', async () => {
     const username = unique('test_a');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
+    await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
 
-    const res = await request(app).post('/auth/register').send({ password, username });
+    const res = await request(app).post('/v1/auth/register').send({ password, username });
 
     expect(res.status).toBe(409);
     expect(res.body.error.message).toBe('Username already exists');
@@ -53,9 +53,9 @@ describe('Auth contract', () => {
 
   it('login sets an httpOnly token cookie', async () => {
     const username = unique('test_a');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
+    await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
 
-    const res = await request(app).post('/auth/login').send({ password, username });
+    const res = await request(app).post('/v1/auth/login').send({ password, username });
 
     expect(res.status).toBe(200);
     const cookie = extractCookie(res);
@@ -68,10 +68,10 @@ describe('Auth contract', () => {
 
   it('login with wrong password returns 401', async () => {
     const username = unique('test_a');
-    await request(app).post('/auth/register').send({ password, username }).expect(201);
+    await request(app).post('/v1/auth/register').send({ password, username }).expect(201);
 
     const res = await request(app)
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .send({ password: 'senha-errada', username });
 
     expect(res.status).toBe(401);
@@ -81,7 +81,7 @@ describe('Auth contract', () => {
 
 describe('Natter contract', () => {
   it('rejects unauthenticated requests with 401', async () => {
-    const res = await request(app).get('/natter/space');
+    const res = await request(app).get('/v1/natter/space');
 
     expect(res.status).toBe(401);
     expect(res.body.error.message).toBe('Not authenticated');
@@ -92,7 +92,7 @@ describe('Natter contract', () => {
     const cookie = await registerAndLogin(username);
 
     const spaceRes = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookie)
       .send({ name: 'Sala Teste', owner: 'evil' });
 
@@ -100,7 +100,7 @@ describe('Natter contract', () => {
     expect(spaceRes.body.owner).toBe(username);
 
     const msgRes = await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', cookie)
       .send({ author: 'evil', content: 'Oi', space_id: String(spaceRes.body.id) });
 
@@ -113,7 +113,7 @@ describe('Natter contract', () => {
   it('returns 404 for missing resources', async () => {
     const cookie = await registerAndLogin(unique('test_b'));
 
-    const res = await request(app).get('/natter/message/999999').set('Cookie', cookie);
+    const res = await request(app).get('/v1/natter/message/999999').set('Cookie', cookie);
 
     expect(res.status).toBe(404);
     expect(res.body.error.message).toBe('Message not found');
@@ -123,21 +123,21 @@ describe('Natter contract', () => {
     const cookie = await registerAndLogin(unique('test_b'));
 
     const space = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', cookie)
       .send({ name: 'Shape Teste' });
     await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', cookie)
       .send({ content: 'shape', space_id: String(space.body.id) })
       .expect(200);
 
-    const list = await request(app).get('/natter/message').set('Cookie', cookie);
+    const list = await request(app).get('/v1/natter/message').set('Cookie', cookie);
     const listed = list.body.find(
       (message: { space_id: number }) => message.space_id === space.body.id,
     );
     const detail = await request(app)
-      .get(`/natter/message/${listed.id}`)
+      .get(`/v1/natter/message/${listed.id}`)
       .set('Cookie', cookie);
 
     expect(Object.keys(listed).sort()).toEqual(Object.keys(detail.body).sort());
@@ -149,22 +149,22 @@ describe('Natter contract', () => {
     const intruder = await registerAndLogin(unique('test_b'));
 
     const space = await request(app)
-      .post('/natter/space')
+      .post('/v1/natter/space')
       .set('Cookie', owner)
       .send({ name: 'Ownership' });
     const message = await request(app)
-      .post('/natter/message')
+      .post('/v1/natter/message')
       .set('Cookie', owner)
       .send({ content: 'privada', space_id: String(space.body.id) });
 
     const updateRes = await request(app)
-      .put(`/natter/message/${message.body.id}`)
+      .put(`/v1/natter/message/${message.body.id}`)
       .set('Cookie', intruder)
       .send({ content: 'hackeado' });
     expect(updateRes.status).toBe(404);
 
     const deleteRes = await request(app)
-      .delete(`/natter/message/${message.body.id}`)
+      .delete(`/v1/natter/message/${message.body.id}`)
       .set('Cookie', intruder);
     expect(deleteRes.status).toBe(404);
   });
@@ -172,6 +172,11 @@ describe('Natter contract', () => {
 
 afterAll(async () => {
   await dbAdmin`DELETE FROM messages WHERE author LIKE 'test_%'`;
-  await dbAdmin`DELETE FROM spaces WHERE owner LIKE 'test_%'`;
+  await dbAdmin`
+    DELETE FROM spaces WHERE id IN (
+      SELECT sm.space_id FROM space_members sm JOIN users u ON u.id = sm.user_id
+      WHERE u.username LIKE 'test_%'
+    )
+  `;
   await dbUser`DELETE FROM users WHERE username LIKE 'test_%'`;
 });

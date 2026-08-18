@@ -2,26 +2,15 @@ import type { NextFunction, Request, Response } from 'express';
 
 import { requestContext } from '../context/request-context.js';
 
-type LogEntry = RequestLog | ResponseLog;
-
-interface RequestLog {
-  body: unknown;
-  method: string;
-  path: string;
-  query: Record<string, unknown>;
-  requestId: string;
-  type: 'request';
-}
-
-interface ResponseLog {
-  body: unknown;
-  durationMs: number;
-  requestId: string;
-  status: number;
-  type: 'response';
-}
-
 const SENSITIVE_KEYS = ['authorization', 'password', 'token'];
+const VALID_LEVELS = ['debug', 'error', 'info', 'warn'] as const;
+type LogLevel = (typeof VALID_LEVELS)[number];
+const LEVEL_ORDER: Record<LogLevel, number> = {
+  debug: 10,
+  error: 40,
+  info: 20,
+  warn: 30,
+};
 
 export function httpLogger(
   req: Request,
@@ -31,7 +20,7 @@ export function httpLogger(
   const requestId = requestContext.getRequestId() ?? 'unknown';
   const start = Date.now();
 
-  log({
+  log('info', {
     body: sanitize(req.body),
     method: req.method,
     path: req.path,
@@ -42,12 +31,13 @@ export function httpLogger(
 
   const originalJson = res.json.bind(res);
   res.json = (body: unknown): Response => {
-    log({
+    log('info', {
       body,
       durationMs: Date.now() - start,
       requestId,
       status: res.statusCode,
       type: 'response',
+      userId: requestContext.getUser()?.userId,
     });
     return originalJson(body);
   };
@@ -55,31 +45,7 @@ export function httpLogger(
   next();
 }
 
-function formatEntry(entry: LogEntry): string {
-  const isReq = entry.type === 'request';
-  const color = isReq ? '\x1b[36m' : '\x1b[32m';
-  const reset = '\x1b[0m';
-  const label = isReq ? '[REQUEST] ' : '[RESPONSE]';
-
-  if (isReq) {
-    const e = entry as RequestLog;
-    return `${color}${label}${reset} [${e.requestId}] ${e.method} ${e.path} ${JSON.stringify(e.body)}`;
-  }
-
-  const e = entry as ResponseLog;
-  return `${color}${label}${reset} [${e.requestId}] ${e.status} ${e.durationMs}ms ${JSON.stringify(e.body)}`;
-}
-
-function log(entry: LogEntry): void {
-  console.log(formatEntry(entry));
-  if (entry.type === 'response') {
-    console.log(
-      '\x1b[90m' + '·'.repeat(process.stdout.columns || 50) + '\x1b[0m',
-    );
-  }
-}
-
-function sanitize(value: unknown): unknown {
+export function sanitize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sanitize);
   if (value && typeof value === 'object') {
     const clean: Record<string, unknown> = {};
@@ -91,4 +57,20 @@ function sanitize(value: unknown): unknown {
     return clean;
   }
   return value;
+}
+
+function currentLevel(): LogLevel {
+  const raw = process.env.LOG_LEVEL;
+  return VALID_LEVELS.includes(raw as LogLevel) ? (raw as LogLevel) : 'info';
+}
+
+function log(level: LogLevel, fields: Record<string, unknown>): void {
+  if (LEVEL_ORDER[level] < LEVEL_ORDER[currentLevel()]) return;
+  const line = JSON.stringify({
+    level,
+    timestamp: new Date().toISOString(),
+    ...fields,
+  });
+  if (level === 'error') console.error(line);
+  else console.log(line);
 }

@@ -14,7 +14,19 @@ function buildErrorBody(error: HttpError) {
   };
 }
 
-const red = (text: string) => `\x1b[31m${text}\x1b[0m`;
+function logError(statusCode: number, message: string, stack?: string): void {
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      message,
+      requestId: requestContext.getRequestId(),
+      stack,
+      statusCode,
+      timestamp: new Date().toISOString(),
+      type: 'error',
+    }),
+  );
+}
 
 export const globalErrorHandler = (
   error: unknown,
@@ -23,12 +35,7 @@ export const globalErrorHandler = (
   _next: NextFunction,
 ) => {
   if (error instanceof HttpError) {
-    console.error(
-      red('[ERROR]   '),
-      '[' + requestContext.getRequestId()?.trim() + ']',
-      error.statusCode,
-      error.message,
-    );
+    logError(error.statusCode, error.message);
     return res.status(error.statusCode).json(buildErrorBody(error));
   }
 
@@ -37,12 +44,14 @@ export const globalErrorHandler = (
       error.type === 'entity.too.large'
         ? 'Payload too large'
         : 'Malformed request body';
+    logError(error.status, message);
     return res.status(error.status).json({ error: { message } });
   }
 
-  console.error('[UnexpectedError]', error);
+  const stack = error instanceof Error ? error.stack : undefined;
+  logError(500, 'Internal server error', stack);
   return res.status(500).json({
-    error: 'Internal server error',
+    error: { message: 'Internal server error' },
   });
 };
 
