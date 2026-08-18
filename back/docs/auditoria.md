@@ -72,9 +72,9 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 
 | Item | Status | Evidência |
 |---|---|---|
-| Inputs validados | PARCIAL | auth validado com zod (P0); natter ainda com guards manuais |
-| Schema validation | PARCIAL | zod em `auth-schemas.ts` (register/login, strict); natter pendente |
-| Body validado | PARCIAL | `auth-schemas.ts` (zod) + `natter-validation.ts:3-29` |
+| Inputs validados | IMPLEMENTADO | zod em auth (`auth-schemas.ts`) e natter (`natter-validation.ts`) |
+| Schema validation | IMPLEMENTADO | zod em auth e natter; guards manuais substituídos (P1) |
+| Body validado | IMPLEMENTADO | `auth-schemas.ts` (strict) + `natter-validation.ts` (zod, strip) |
 | Query params validados | N/A | nenhum endpoint usa query |
 | Path params validados | IMPLEMENTADO | `parseId` rejeita não-inteiro/≤0 (`natter-validation.ts:37-44`) |
 | Headers validados | AUSENTE | sem checagem de Content-Type |
@@ -114,12 +114,12 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 | Security headers | IMPLEMENTADO | `helmet()` (`app.ts:39`) + `Cache-Control: no-store` |
 | Content-Type validado | AUSENTE | |
 | Métodos HTTP controlados | IMPLEMENTADO | routers só registram métodos usados |
-| Limite de payload | PARCIAL | default 100kb implícito do `express.json` |
+| Limite de payload | IMPLEMENTADO | `express.json({ limit: '100kb' })` explícito + 413/400 (testes em `http-hardening.test.ts`) |
 | Request abuse | PARCIAL | só rate-limit |
 | Rate limiting | IMPLEMENTADO | 100 leitura/20 escrita por 15min (`rate-limit.ts:21-22`) |
 | Limites p/ endpoints sensíveis | IMPLEMENTADO | `writeLimiter` em login/register (`auth-router.ts:8-9`) |
-| Timeout de requests | AUSENTE | nenhum `server.timeout`/timeout por handler |
-| Requisições gigantes | PARCIAL | só o default do body parser |
+| Timeout de requests | IMPLEMENTADO | `requestTimeout`/`timeout` 30s + `headersTimeout` 60s (`index.ts`, `REQUEST_TIMEOUT_MS`) |
+| Requisições gigantes | IMPLEMENTADO | limite explícito 100kb (413) |
 
 ---
 
@@ -181,11 +181,11 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 | Item | Status | Evidência |
 |---|---|---|
 | Processo de atualização | AUSENTE | sem dependabot/renovate |
-| Análise de vulnerabilidades | PARCIAL | `pnpm audit --audit-level high` no CI (`.github/workflows/ci.yml`) |
-| Dependências desnecessárias | PARCIAL | `pg` e `@types/pg` mortos (`package.json`, nenhum import) — remoção pendente |
-| Docker seguro | PARCIAL | imagem oficial `node:22-alpine`, `USER node` (não-root) ✔; **sem `.dockerignore`** (node_modules/chaves do host podem entrar), `npm install` sem lockfile, `CMD` roda servidor dev (`Dockerfile:5-9`) |
+| Análise de vulnerabilidades | IMPLEMENTADO | `pnpm audit` — **0 vulnerabilidades** (P1); bloqueia no CI |
+| Dependências desnecessárias | IMPLEMENTADO | `pg`/`@types/pg` removidos (P1) |
+| Docker seguro | IMPLEMENTADO | multi-stage, `pnpm install --frozen-lockfile`, prod-only, `USER node`, `CMD node dist/index.js` (P1) |
 | Container não-root | IMPLEMENTADO | `USER node` |
-| Secrets na imagem | PARCIAL | `COPY . .` + sem `.dockerignore` → `certs/private.pem` iria para a imagem |
+| Secrets na imagem | IMPLEMENTADO | `.dockerignore` exclui `certs/`, `.env`, `node_modules`, `dist` (verificado: imagem sem certs) |
 | Config prod/dev separadas | PARCIAL | só via `NODE_ENV` |
 | Privilégios minimizados | IMPLEMENTADO (banco) | roles `app_read_write` vs `app_admin` |
 | Banco exposto | PARCIAL | porta 5432 publicada no host (`docker-compose.yml:7-8`) — aceitável em dev |
@@ -217,7 +217,7 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 | Expõe só o necessário | IMPLEMENTADO | views sem `msg_text` cru no retorno (`natter-types.ts`) |
 | Métodos HTTP semânticos | IMPLEMENTADO | POST/GET/PUT/DELETE corretos |
 | Autorização consistente | IMPLEMENTADO | `router.use(authenticate)` cobre tudo |
-| Paginação limitada | AUSENTE | lists sem limit/offset |
+| Paginação limitada | IMPLEMENTADO | `limit` (1–100, default 20) + `offset` validados com zod; `pagination.test.ts` |
 | Filtros validados | N/A | |
 | Ordenação validada | N/A | |
 | Endpoints internos expostos | AUSENTE | |
@@ -229,9 +229,9 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 
 ## 13. Classificação final
 
-**IMPLEMENTADO (22):** auth JWT RS256 com algoritmo fixo · expiração · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · rate limit · ownership em escrita **e leitura (P0)** · mass assignment coberto · SQLi protegido · parsing de id · **validação zod em auth (P0)** · erro centralizado/formato único · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · container não-root · testes de contrato auth+authz · **testes BOLA e input validation (P0)** · **CI/CD com audit de dependências (P0)**.
+**IMPLEMENTADO (27):** auth JWT RS256 com algoritmo fixo · expiração · bcrypt · cookie HttpOnly/SameSite · helmet · CORS restrito · rate limit · ownership em escrita e leitura (P0) · mass assignment coberto · SQLi protegido · **schema validation zod em auth e natter (P0/P1)** · **paginação com limites (P1)** · **payload 100kb explícito + 413 (P1)** · **timeouts (P1)** · erro centralizado/formato único (incl. erros do body-parser) · requestId · redação de logs · audit log · HTTPS · env/`.env.example` · chaves fora do git · **container não-root sem secrets (P1)** · **dependências limpas, `pnpm audit` zero (P1)** · testes de contrato auth+authz · testes BOLA/input-validation/pagination/http-hardening · CI/CD com audit de dependências.
 
-**PARCIAL (8):** claims JWT · validação de entrada (natter ainda com guards manuais) · payload size implícito · logs não-JSON · audit sem eventos semânticos · Dockerfile (lockfile/dockerignore/dev CMD) · dependências mortas · confidencialidade XSS (nada renderiza hoje).
+**PARCIAL (5):** claims JWT · logs não-JSON · audit sem eventos semânticos · confidencialidade XSS (nada renderiza hoje) · rate limit por IP (sem identidade).
 
 **AUSENTE (12):** refresh token · revogação · RBAC/scopes · timeout · paginação · métricas · alertas · CI/CD · audit de dependências · testes de validação/rate-limit · versionamento · política de senha/validação de registro.
 
@@ -252,9 +252,9 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 ### Misconfigurations encontradas
 
 - Senhas de roles do banco versionadas na migração — **CORRIGIDO (P0)**: migração `1787063356263_drop-app-roles` remove as roles (up/down verificados).
-- Sem `.dockerignore` + `npm install` sem lockfile + CMD dev no Dockerfile. Pendente (Fase P1).
+- Dockerfile com `npm install`/dev CMD/sem `.dockerignore` — **CORRIGIDO (P1)**: multi-stage, lockfile, prod-only, non-root, secrets fora da imagem.
 - Docs drift: `fluxos.md` descreve front que não corresponde ao código atual; README aponta caminho de chaves errado (`back/private.pem` vs `back/certs/`). Pendente.
-- `pg`/`@types/pg` instalados e não usados. Pendente (Fase P1).
+- ~~`pg`/`@types/pg` instalados e não usados~~ — **CORRIGIDO (P1)**: removidos; `pnpm audit` = 0 vulnerabilidades.
 
 ### Débitos de segurança
 
@@ -266,8 +266,8 @@ Principal achado da auditoria (BOLA/IDOR de leitura) foi corrigido na branch `se
 
 - ~~Filtrar leituras por autor/owner + teste de regressão (BOLA)~~ — feito (P0).
 - ~~Validar register/login (strings não vazias, limites) + teste 400~~ — feito (P0, zod).
-- `.dockerignore` + `pnpm install --frozen-lockfile` + `CMD ["pnpm","start"]` no Dockerfile.
-- Remover `pg`/`@types/pg`; ~~adicionar script `pnpm audit`~~ — feito (P0, no CI).
+- ~~`.dockerignore` + `pnpm install --frozen-lockfile` + `CMD ["pnpm","start"]` no Dockerfile~~ — feito (P1, multi-stage).
+- ~~Remover `pg`/`@types/pg`; adicionar `pnpm audit`~~ — feito (P0/P1, zero vulnerabilidades).
 - ~~Remover senhas das migrações~~ — feito (P0).
 
 ### Riscos críticos
@@ -276,11 +276,11 @@ Nenhum para o estágio atual (estudo local, sem dados reais).
 
 ### Recomendações de médio prazo
 
-- Paginação (limit/offset) com limites e validação.
-- Revogação: lista de deny (jti/blacklist) ou refresh token com rotação.
-- Rate limit por usuário (não só IP) + lockout por conta em login.
-- GitHub Actions: lint → type-check → build → test → `pnpm audit`.
-- Logs JSON estruturados com nível/severidade.
+- ~~Paginação (limit/offset) com limites e validação~~ — feito (P1).
+- Revogação: lista de deny (jti/blacklist) ou refresh token com rotação (Fase P2).
+- Rate limit por usuário (não só IP) + lockout por conta em login (Fase P2).
+- ~~CI com lint → type-check → build → test → `pnpm audit`~~ — feito (P0).
+- Logs JSON estruturados com nível/severidade (Fase P3).
 
 ### Recomendações estruturais
 
