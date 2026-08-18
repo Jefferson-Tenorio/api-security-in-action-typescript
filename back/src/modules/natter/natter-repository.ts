@@ -39,30 +39,42 @@ export class NatterRepository {
     if (result.count === 0) throw HttpError.notFound('Space not found');
   }
 
-  async findAllMessages(): Promise<MessageView[] | null> {
+  async findAllMessages(
+    author: string,
+    limit: number,
+    offset: number,
+  ): Promise<MessageView[] | null> {
     return this.conn<MessageView[]>`
       SELECT m.id, m.author, m.msg_text AS content, m.msg_time, m.space_id
       FROM messages m JOIN spaces s ON m.space_id = s.id
+      WHERE m.author = ${author}
+      LIMIT ${limit} OFFSET ${offset}
     `;
   }
 
-  async findAllSpaces(): Promise<null | SpaceView[]> {
+  async findAllSpaces(
+    owner: string,
+    limit: number,
+    offset: number,
+  ): Promise<null | SpaceView[]> {
     return this.conn<SpaceView[]>`
-      SELECT id, name, owner FROM spaces;
+      SELECT id, name, owner FROM spaces
+      WHERE owner = ${owner}
+      LIMIT ${limit} OFFSET ${offset}
     `;
   }
 
-  async findByIdMessage(id: number): Promise<MessageView | null> {
+  async findByIdMessage(id: number, author: string): Promise<MessageView | null> {
     const [message] = await this.conn<MessageView[]>`
       SELECT id, author, msg_text AS content, msg_time, space_id
-      FROM messages WHERE id = ${id}
+      FROM messages WHERE id = ${id} AND author = ${author}
     `;
     return message ?? null;
   }
 
-  async findByIdSpace(id: number): Promise<null | SpaceView> {
+  async findByIdSpace(id: number, owner: string): Promise<null | SpaceView> {
     const [space] = await this.conn<SpaceView[]>`
-      SELECT id, name, owner FROM spaces WHERE id = ${id}
+      SELECT id, name, owner FROM spaces WHERE id = ${id} AND owner = ${owner}
     `;
     return space ?? null;
   }

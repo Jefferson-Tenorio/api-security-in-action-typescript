@@ -16,6 +16,12 @@ const options = {
 
 const app = new App();
 
-https.createServer(options, app.instance).listen(env.port, () => {
+const server = https.createServer(options, app.instance);
+
+server.timeout = env.timeoutMs;
+server.requestTimeout = env.timeoutMs;
+server.headersTimeout = 60_000;
+
+server.listen(env.port, () => {
   console.log(`HTTPS running on https://localhost:${env.port}`);
 });

@@ -31,8 +31,31 @@ export const globalErrorHandler = (
     );
     return res.status(error.statusCode).json(buildErrorBody(error));
   }
+
+  if (isBodyParserError(error)) {
+    const message =
+      error.type === 'entity.too.large'
+        ? 'Payload too large'
+        : 'Malformed request body';
+    return res.status(error.status).json({ error: { message } });
+  }
+
   console.error('[UnexpectedError]', error);
   return res.status(500).json({
     error: 'Internal server error',
   });
 };
+
+function isBodyParserError(
+  error: unknown,
+): error is { status: number; type: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    typeof (error as { status: unknown }).status === 'number' &&
+    'type' in error &&
+    typeof (error as { type: unknown }).type === 'string' &&
+    (error as { type: string }).type.startsWith('entity.')
+  );
+}

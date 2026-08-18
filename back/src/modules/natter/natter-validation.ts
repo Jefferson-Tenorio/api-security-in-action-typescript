@@ -1,34 +1,63 @@
-import type { Message, Space } from './natter-types.js';
+import { z, type ZodIssue } from 'zod';
 
 import { HttpError } from '../../shared/error/http-error.js';
 
-export function isContent(raw: unknown): raw is string {
-  return typeof raw === 'string' && raw.length > 0;
-}
+const messageSchema = z.object({
+  content: z.string().min(1, 'Content cannot be empty').max(100),
+  space_id: z.string().min(1, 'space_id cannot be empty'),
+});
 
-export function isMessage(raw: unknown): raw is Message {
-  if (typeof raw !== 'object' || raw === null) return false;
+const spaceSchema = z.object({
+  name: z.string().min(1, 'Name cannot be empty').max(50),
+});
 
-  const normalized = raw as Record<string, unknown>;
+const contentSchema = z.object({
+  content: z.string().min(1, 'Content cannot be empty').max(100),
+});
 
-  return (
-    typeof normalized.content === 'string' &&
-    typeof normalized.space_id === 'string'
-  );
-}
+const idSchema = z.coerce.number().int().positive();
 
-export function isSpace(raw: unknown): raw is Space {
-  if (typeof raw !== 'object' || raw === null) return false;
+const listQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
 
-  const normalized = raw as Record<string, unknown>;
+export type ListQuery = z.infer<typeof listQuerySchema>;
 
-  return typeof normalized.name === 'string';
+export function parseContent(body: unknown): z.infer<typeof contentSchema> {
+  const result = contentSchema.safeParse(body);
+  if (!result.success) return reject('Invalid payload', result.error.issues);
+  return result.data;
 }
 
 export function parseId(raw: unknown): number {
-  const id = Number(raw);
-  if (typeof raw !== 'string' || !Number.isInteger(id) || id <= 0) {
-    throw HttpError.badRequest('Invalid id');
-  }
-  return id;
+  const result = idSchema.safeParse(raw);
+  if (!result.success) throw HttpError.badRequest('Invalid id');
+  return result.data;
+}
+
+export function parseListQuery(query: unknown): ListQuery {
+  const result = listQuerySchema.safeParse(query);
+  if (!result.success) return reject('Invalid query', result.error.issues);
+  return result.data;
+}
+
+export function parseMessage(body: unknown): z.infer<typeof messageSchema> {
+  const result = messageSchema.safeParse(body);
+  if (!result.success) return reject('Invalid payload', result.error.issues);
+  return result.data;
+}
+
+export function parseSpace(body: unknown): z.infer<typeof spaceSchema> {
+  const result = spaceSchema.safeParse(body);
+  if (!result.success) return reject('Invalid payload', result.error.issues);
+  return result.data;
+}
+
+function reject(message: string, issues: ZodIssue[]): never {
+  const errors = issues.map((issue) => ({
+    fields: issue.path.map(String),
+    message: issue.message,
+  }));
+  throw HttpError.badRequest(message, errors);
 }

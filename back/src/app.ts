@@ -34,7 +34,7 @@ export class App {
         origin: env.corsOrigin,
       }),
     );
-    this.instance.use(express.json());
+    this.instance.use(express.json({ limit: '100kb' }));
     this.instance.use(httpLogger);
 
     //headers
