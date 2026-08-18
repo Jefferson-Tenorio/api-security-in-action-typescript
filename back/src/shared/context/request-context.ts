@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'async_hooks';
 
 export interface RequestUser {
+  jti: string;
   userId: string;
   username: string;
 }

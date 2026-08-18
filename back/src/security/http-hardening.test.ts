@@ -13,7 +13,7 @@ function unique(prefix: string): string {
 describe('HTTP hardening — payload and body parsing', () => {
   it('rejects payloads above the explicit 100kb limit with 413', async () => {
     const res = await request(app)
-      .post('/auth/register')
+      .post('/v1/auth/register')
       .send({ filler: 'x'.repeat(200_000), password: 'SenhaForte123!', username: unique('payload') });
 
     expect(res.status).toBe(413);
@@ -22,7 +22,7 @@ describe('HTTP hardening — payload and body parsing', () => {
 
   it('rejects malformed JSON with 400', async () => {
     const res = await request(app)
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .set('Content-Type', 'application/json')
       .send('{"username": ');
 
@@ -32,7 +32,7 @@ describe('HTTP hardening — payload and body parsing', () => {
 
   it('rejects non-JSON content-type on json routes with 400', async () => {
     const res = await request(app)
-      .post('/auth/login')
+      .post('/v1/auth/login')
       .set('Content-Type', 'text/plain')
       .send('not json');
 

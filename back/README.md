@@ -5,12 +5,13 @@ A hands-on implementation of 'API Security in Action' by Neil Madden, built in T
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Setup](./docs/setup.md)
-3. [OpenSSL](#openssl)
-4. [Mkcert](#mkcert)
-5. [CORs & Helmet](#cors--helmet)
-6. [Migrations](#migrations)
-7. [Project Structure](#project-structure)
+2. [OpenSSL](#openssl)
+3. [Mkcert](#mkcert)
+4. [CORs & Helmet](#cors--helmet)
+5. [JWT](#jwt)
+6. [Rate limiting](#rate-limiting)
+7. [Migrations](#migrations)
+8. [Project Structure](#project-structure)
 
 ## OpenSSL
 
@@ -24,37 +25,43 @@ Composto por:
 
 Principais comandos:
 
-Gerar par de chaves RSA 2048:
+Gerar par de chaves RSA 2048 (na pasta `back/certs/`):
 
 ```bash
+mkdir -p certs
 # gera a chave privada
-openssl genrsa -out private.pem 2048
+openssl genrsa -out certs/private.pem 2048
 # extrai a chave pública da privada
-openssl rsa -in private.pem -pubout -out public.pem
+openssl rsa -in certs/private.pem -pubout -out certs/public.pem
 ```
 
 Confirmar se o par de chaves gera o mesmo valor:
 
 ```bash
 # confirmar que o par bate — os dois devem gerar o mesmo hash
-openssl rsa -in private.pem -pubout | openssl md5
-openssl rsa -in public.pem -pubin | openssl md5
+openssl rsa -in certs/private.pem -pubout | openssl md5
+openssl rsa -in certs/public.pem -pubin | openssl md5
 ```
 
 Usos:
 
 ```javascript
-export function signToken(payload: TokenPayload): string {
+export function sign(payload: TokenPayload): string {
   return jwt.sign(payload, privateKey, {
     algorithm: 'RS256',
-    expiresIn: '15m',
+    audience: 'natter-web',
+    expiresIn: 15 * 60 * 1000, // ms
+    issuer: 'natter-api',
+    jwtid: crypto.randomUUID(),
   });
 }
 
-export function verifyToken(token: string): TokenPayload {
+export function verify(token: string): VerifiedToken {
   return jwt.verify(token, publicKey, {
     algorithms: ['RS256'],
-  }) as TokenPayload;
+    audience: 'natter-web',
+    issuer: 'natter-api',
+  }) as VerifiedToken;
 }
 ```
 
@@ -106,6 +113,20 @@ https.createServer(options, app.instance).listen(port, () => {
 
 Segurança http.
 
+## JWT
+
+- Algoritmo fixo RS256 (nunca HS256) com chaves RSA em `back/certs/`.
+- Claims emitidos: `iss` (`JWT_ISSUER`, default `natter-api`), `aud` (`JWT_AUDIENCE`, default `natter-web`), `jti` (UUID por login), `userId`, `username`, `iat`, `exp`.
+- `verify` valida assinatura + `iss` + `aud` + `exp`; `authenticate` também consulta a deny-list de `jti` (tabela `token_denylist`) — token revogado via `logout` → 401.
+- TTL: `JWT_EXPIRES_IN_MS` (default 15min).
+
+## Rate limiting
+
+- Desligado por padrão; habilite em produção com `RATE_LIMIT_ENABLED=true` (variável lida no boot).
+- Janela: 15 minutos. Chave: `userId` quando autenticado, IP quando anônimo.
+- Limites: leitura 100 req / escrita 20 req / login 20 por `username`+IP.
+- Ultrapassou → **429** `{error:{message:"Too many requests"}}` + header `Retry-After`.
+
 ## Migrations
 
 Antes de rodar o servidor pela primeira vez (ou sempre que houver novas migrations), aplique-as no banco:
@@ -131,7 +152,7 @@ back/
 │   ├── public.pem          # chave pública JWT (RS256)
 │   ├── localhost+1.pem     # certificado TLS (mkcert)
 │   └── localhost+1-key.pem # chave privada TLS (mkcert)
-├── docs/                   # documentação (setup, fluxos, auditoria semântica)
+├── docs/                   # documentação (auditoria, plano de segurança, fluxos)
 ├── migrations/             # migrations SQL (node-pg-migrate)
 ├── src/
 │   ├── index.ts            # entrypoint HTTPS
@@ -139,10 +160,11 @@ back/
 │   ├── config/
 │   │   └── env.ts          # variáveis de ambiente tipadas
 │   ├── modules/            # módulos de domínio
+│   │   ├── auth/           # register/login/logout, JWT, deny-list, authenticate
 │   │   ├── audit_log/      # auditoria de requisições (middleware + repo)
 │   │   └── natter/         # domínio principal (controller/service/repo/router/types)
+│   ├── security/           # suíte de testes de segurança (BOLA, JWT, revogação, rate limit…)
 │   └── shared/
-│       ├── auth/           # auth: controller, service, JWT, middleware, router
 │       ├── context/        # AsyncLocalStorage (requestId por request)
 │       ├── db/             # conexões PostgreSQL (user/admin)
 │       ├── error/          # HttpError + globalErrorHandler
@@ -159,10 +181,9 @@ Cada módulo segue o mesmo padrão: `controller` (HTTP) → `service` (regras de
 
 ## Documentação
 
-- [Setup](./docs/setup.md) — instalação do ambiente
 - [Fluxos](./docs/fluxos.md) — diagramas de dados, fluxo da API e contratos de endpoints
-- [Auditoria semântica](./docs/SEMANTIC-AUDIT.md) — findings com evidência no código
-- [Roadmap semântico](./docs/SEMANTIC-ROADMAP.md) — mudanças justificadas pela auditoria
+- [Auditoria de segurança](./docs/auditoria.md) — achados com evidência no código e status por fase
+- [Plano de segurança](./docs/plano-seguranca.md) — fases P2–P4 e método de trabalho
 
 ## Roadmaps
 

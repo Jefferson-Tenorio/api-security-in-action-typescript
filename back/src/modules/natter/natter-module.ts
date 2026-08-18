@@ -5,6 +5,8 @@ import type { TokenPayload } from '../auth/jwt-service.js';
 import { requestContext } from '../../shared/context/request-context.js';
 import { dbAdmin } from '../../shared/db/db.js';
 import { HttpError } from '../../shared/error/http-error.js';
+import { SecurityEventLogger } from '../audit_log/security-event-logger.js';
+import { PgSecurityEventRepository } from '../audit_log/security-event-repository.js';
 import { NatterController } from './natter-controller.js';
 import { NatterRepository } from './natter-repository.js';
 import { NatterRouter } from './natter-router.js';
@@ -12,7 +14,8 @@ import { NatterService } from './natter-service.js';
 
 export function NatterModule(authenticate: RequestHandler) {
   const repository = new NatterRepository(dbAdmin);
-  const service = new NatterService(repository, getCurrentUser);
+  const events = new SecurityEventLogger(new PgSecurityEventRepository(dbAdmin));
+  const service = new NatterService(repository, getCurrentUser, events);
   const controller = new NatterController(service);
   const router = NatterRouter(controller, authenticate);
 
